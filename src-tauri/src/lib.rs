@@ -165,71 +165,254 @@ fn draw_dot(buffer: &mut [u8], width: usize, x: i32, y: i32, color: [u8; 4]) {
     draw_pixel(buffer, width, x + 1, y + 1, color);
 }
 
-fn draw_digit(buffer: &mut [u8], width: usize, digit: u8, origin_x: i32, origin_y: i32) {
-    const GLYPHS: [[u8; 15]; 10] = [
-        [1, 1, 1, 1, 0, 1, 1, 0, 1, 1, 0, 1, 1, 1, 1],
-        [0, 1, 0, 1, 1, 0, 0, 1, 0, 0, 1, 0, 1, 1, 1],
-        [1, 1, 1, 0, 0, 1, 1, 1, 1, 1, 0, 0, 1, 1, 1],
-        [1, 1, 1, 0, 0, 1, 0, 1, 1, 0, 0, 1, 1, 1, 1],
-        [1, 0, 1, 1, 0, 1, 1, 1, 1, 0, 0, 1, 0, 0, 1],
-        [1, 1, 1, 1, 0, 0, 1, 1, 1, 0, 0, 1, 1, 1, 1],
-        [1, 1, 1, 1, 0, 0, 1, 1, 1, 1, 0, 1, 1, 1, 1],
-        [1, 1, 1, 0, 0, 1, 0, 1, 0, 0, 1, 0, 0, 1, 0],
-        [1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1],
-        [1, 1, 1, 1, 0, 1, 1, 1, 1, 0, 0, 1, 1, 1, 1],
-    ];
-    let white = [242, 242, 242, 255];
+const GLYPHS_3X5: [[u8; 15]; 10] = [
+    [1, 1, 1, 1, 0, 1, 1, 0, 1, 1, 0, 1, 1, 1, 1],
+    [0, 1, 0, 1, 1, 0, 0, 1, 0, 0, 1, 0, 1, 1, 1],
+    [1, 1, 1, 0, 0, 1, 1, 1, 1, 1, 0, 0, 1, 1, 1],
+    [1, 1, 1, 0, 0, 1, 0, 1, 1, 0, 0, 1, 1, 1, 1],
+    [1, 0, 1, 1, 0, 1, 1, 1, 1, 0, 0, 1, 0, 0, 1],
+    [1, 1, 1, 1, 0, 0, 1, 1, 1, 0, 0, 1, 1, 1, 1],
+    [1, 1, 1, 1, 0, 0, 1, 1, 1, 1, 0, 1, 1, 1, 1],
+    [1, 1, 1, 0, 0, 1, 0, 1, 0, 0, 1, 0, 0, 1, 0],
+    [1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1],
+    [1, 1, 1, 1, 0, 1, 1, 1, 1, 0, 0, 1, 1, 1, 1],
+];
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum TrayIconSize {
+    Px16,
+    Px20,
+    Px24,
+    Px32,
+}
+
+impl TrayIconSize {
+    fn pixels(self) -> usize {
+        match self {
+            Self::Px16 => 16,
+            Self::Px20 => 20,
+            Self::Px24 => 24,
+            Self::Px32 => 32,
+        }
+    }
+
+    fn for_scale_factor(scale_factor: f64) -> Self {
+        if scale_factor <= 1.0 {
+            Self::Px16
+        } else if scale_factor <= 1.25 {
+            Self::Px20
+        } else if scale_factor <= 1.5 {
+            Self::Px24
+        } else {
+            Self::Px32
+        }
+    }
+}
+
+struct TrayRaster {
+    rgba: Vec<u8>,
+    size: usize,
+}
+
+fn set_mask_pixel(mask: &mut [bool], size: usize, x: i32, y: i32) {
+    if x >= 0 && y >= 0 && x < size as i32 && y < size as i32 {
+        mask[y as usize * size + x as usize] = true;
+    }
+}
+
+fn stamp_digit(
+    mask: &mut [bool],
+    size: usize,
+    digit: u8,
+    origin_x: i32,
+    origin_y: i32,
+    scale_x: i32,
+    scale_y: i32,
+) {
     for row in 0..5 {
         for column in 0..3 {
-            if GLYPHS[digit as usize][row * 3 + column] == 1 {
-                draw_dot(
-                    buffer,
-                    width,
-                    origin_x + column as i32 * 2,
-                    origin_y + row as i32 * 2,
-                    white,
-                );
+            if GLYPHS_3X5[digit as usize][row * 3 + column] == 0 {
+                continue;
+            }
+            for offset_y in 0..scale_y {
+                for offset_x in 0..scale_x {
+                    set_mask_pixel(
+                        mask,
+                        size,
+                        origin_x + column as i32 * scale_x + offset_x,
+                        origin_y + row as i32 * scale_y + offset_y,
+                    );
+                }
             }
         }
     }
 }
 
-fn render_tray_icon(value: u8) -> Image<'static> {
-    const SIZE: usize = 32;
-    const DOTS: usize = 24;
-    let mut rgba = vec![0_u8; SIZE * SIZE * 4];
-    let active = (value as usize * DOTS + 50) / 100;
-    for index in 0..DOTS {
+fn stamp_standard_value(mask: &mut [bool], size: usize, value: u8) {
+    let digits: Vec<u8> = if value >= 10 {
+        vec![value / 10, value % 10]
+    } else {
+        vec![value]
+    };
+    let scale = match (size, digits.len()) {
+        (16, 1) => 3,
+        (16 | 20, 2) => 2,
+        (20, 1) => 3,
+        (24, 1) => 4,
+        (24, 2) => 3,
+        (32, 1) => 5,
+        (32, 2) => 4,
+        _ => 2,
+    };
+    let glyph_width = 3 * scale;
+    let gap = 1;
+    let total_width = glyph_width * digits.len() as i32 + gap * (digits.len() as i32 - 1);
+    let total_height = 5 * scale;
+    let origin_x = (size as i32 - total_width) / 2;
+    let origin_y = (size as i32 - total_height) / 2;
+    for (index, digit) in digits.into_iter().enumerate() {
+        stamp_digit(
+            mask,
+            size,
+            digit,
+            origin_x + index as i32 * (glyph_width + gap),
+            origin_y,
+            scale,
+            scale,
+        );
+    }
+}
+
+fn stamp_hundred(mask: &mut [bool], size: usize) {
+    match size {
+        16 => {
+            // Dedicated micro-layout: a dominant 1 followed by two stacked zeroes.
+            stamp_digit(mask, size, 1, 1, 3, 2, 2);
+            stamp_digit(mask, size, 0, 11, 1, 1, 1);
+            stamp_digit(mask, size, 0, 11, 10, 1, 1);
+        }
+        20 | 24 => {
+            // 5x7-inspired 100: narrow horizontal pixels, doubled vertically.
+            const ROWS: [&str; 7] = [
+                "01110 01110 01110",
+                "00110 10001 10001",
+                "00110 10001 10001",
+                "00110 10001 10001",
+                "00110 10001 10001",
+                "00110 10001 10001",
+                "11111 01110 01110",
+            ];
+            let origin_x = (size as i32 - 17) / 2;
+            let origin_y = (size as i32 - 14) / 2;
+            for (row, pattern) in ROWS.iter().enumerate() {
+                for (column, bit) in pattern.bytes().filter(|bit| *bit != b' ').enumerate() {
+                    if bit == b'1' {
+                        set_mask_pixel(
+                            mask,
+                            size,
+                            origin_x + column as i32,
+                            origin_y + row as i32 * 2,
+                        );
+                        set_mask_pixel(
+                            mask,
+                            size,
+                            origin_x + column as i32,
+                            origin_y + row as i32 * 2 + 1,
+                        );
+                    }
+                }
+            }
+        }
+        32 => {
+            for (index, digit) in [1_u8, 0, 0].into_iter().enumerate() {
+                stamp_digit(mask, size, digit, 1 + index as i32 * 10, 8, 3, 3);
+            }
+        }
+        _ => unreachable!("unsupported tray icon size"),
+    }
+}
+
+fn paint_number(buffer: &mut [u8], mask: &[bool], size: usize) {
+    let outline = [0, 0, 0, 245];
+    let white = [255, 255, 255, 255];
+    for (index, is_number) in mask.iter().enumerate() {
+        if !is_number {
+            continue;
+        }
+        let x = (index % size) as i32;
+        let y = (index / size) as i32;
+        for offset_y in -1..=1 {
+            for offset_x in -1..=1 {
+                draw_pixel(buffer, size, x + offset_x, y + offset_y, outline);
+            }
+        }
+    }
+    for (index, is_number) in mask.iter().enumerate() {
+        if *is_number {
+            draw_pixel(
+                buffer,
+                size,
+                (index % size) as i32,
+                (index / size) as i32,
+                white,
+            );
+        }
+    }
+}
+
+fn paint_ring(buffer: &mut [u8], size: usize, value: u8) {
+    let dot_count = match size {
+        16 => return,
+        20 => 4,
+        24 => 12,
+        32 => 20,
+        _ => unreachable!("unsupported tray icon size"),
+    };
+    let center = (size as f64 - 1.0) / 2.0;
+    let radius = center - if size == 20 { 1.0 } else { 0.5 };
+    let active = (value.min(100) as usize * dot_count + 50) / 100;
+    let accent_count = if size >= 24 { 2 } else { 1 };
+    for index in 0..dot_count {
         let angle =
-            index as f64 / DOTS as f64 * std::f64::consts::TAU - std::f64::consts::FRAC_PI_2;
-        let x = (15.0 + angle.cos() * 13.0).round() as i32;
-        let y = (15.0 + angle.sin() * 13.0).round() as i32;
+            index as f64 / dot_count as f64 * std::f64::consts::TAU - std::f64::consts::FRAC_PI_2;
+        let x = (center + angle.cos() * radius).round() as i32;
+        let y = (center + angle.sin() * radius).round() as i32;
         let color = if index < active {
-            if index + 3 >= active {
+            if index + accent_count >= active {
                 [89, 214, 111, 255]
             } else {
-                [242, 242, 242, 255]
+                [224, 224, 224, 255]
             }
         } else {
-            [92, 92, 92, 220]
+            [105, 105, 105, 235]
         };
-        draw_dot(&mut rgba, SIZE, x, y, color);
+        draw_pixel(buffer, size, x, y, [0, 0, 0, 230]);
+        if size == 32 {
+            draw_dot(buffer, size, x - 1, y - 1, color);
+        } else {
+            draw_pixel(buffer, size, x, y, color);
+        }
     }
+}
 
-    let display_value = value.min(100);
-    let tens = display_value / 10;
-    let ones = display_value % 10;
-    if display_value == 100 {
-        draw_digit(&mut rgba, SIZE, 1, 6, 11);
-        draw_digit(&mut rgba, SIZE, 0, 13, 11);
-        draw_digit(&mut rgba, SIZE, 0, 20, 11);
-    } else if display_value >= 10 {
-        draw_digit(&mut rgba, SIZE, tens, 9, 11);
-        draw_digit(&mut rgba, SIZE, ones, 17, 11);
+fn render_tray_raster(value: u8, icon_size: TrayIconSize) -> TrayRaster {
+    let size = icon_size.pixels();
+    let value = value.min(100);
+    let mut rgba = vec![0_u8; size * size * 4];
+    paint_ring(&mut rgba, size, value);
+    let mut number_mask = vec![false; size * size];
+    if value == 100 {
+        stamp_hundred(&mut number_mask, size);
     } else {
-        draw_digit(&mut rgba, SIZE, ones, 13, 11);
+        stamp_standard_value(&mut number_mask, size, value);
     }
-    Image::new_owned(rgba, SIZE as u32, SIZE as u32)
+    paint_number(&mut rgba, &number_mask, size);
+    TrayRaster { rgba, size }
+}
+
+fn render_tray_icon(value: u8, icon_size: TrayIconSize) -> Image<'static> {
+    let raster = render_tray_raster(value, icon_size);
+    Image::new_owned(raster.rgba, raster.size as u32, raster.size as u32)
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -241,6 +424,10 @@ pub fn run() {
             sync_popover_geometry
         ])
         .setup(|app| {
+            let tray_icon_size = app
+                .primary_monitor()?
+                .map(|monitor| TrayIconSize::for_scale_factor(monitor.scale_factor()))
+                .unwrap_or(TrayIconSize::Px16);
             let open = MenuItem::with_id(app, "open", "Open", true, None::<&str>)?;
             let refresh = MenuItem::with_id(app, "refresh", "Refresh", true, None::<&str>)?;
             let startup = CheckMenuItem::with_id(
@@ -261,7 +448,7 @@ pub fn run() {
 
             TrayIconBuilder::with_id("meroa-tray")
                 .tooltip("MEROA — 74% remaining")
-                .icon(render_tray_icon(74))
+                .icon(render_tray_icon(74, tray_icon_size))
                 .menu(&menu)
                 .show_menu_on_left_click(false)
                 .on_tray_icon_event(|tray, event| {
@@ -310,14 +497,119 @@ pub fn run() {
 
 #[cfg(test)]
 mod tests {
-    use super::{calculate_popover_layout, render_tray_icon, TrayAnchor, WorkArea};
+    use std::{fs, path::PathBuf};
+
+    use super::{calculate_popover_layout, render_tray_raster, TrayAnchor, TrayIconSize, WorkArea};
 
     #[test]
-    fn tray_renderer_accepts_edge_percentages() {
-        let _ = render_tray_icon(0);
-        let _ = render_tray_icon(9);
-        let _ = render_tray_icon(74);
-        let _ = render_tray_icon(100);
+    fn tray_renderer_covers_values_and_native_sizes() {
+        for size in [
+            TrayIconSize::Px16,
+            TrayIconSize::Px20,
+            TrayIconSize::Px24,
+            TrayIconSize::Px32,
+        ] {
+            for value in [0, 9, 23, 74, 91, 100] {
+                let raster = render_tray_raster(value, size);
+                assert_eq!(raster.rgba.len(), size.pixels() * size.pixels() * 4);
+                let (pixels, remainder) = raster.rgba.as_chunks::<4>();
+                assert!(remainder.is_empty());
+                assert!(pixels.iter().any(|pixel| pixel[3] == 255));
+                assert!(pixels.iter().any(|pixel| pixel[3] == 0));
+            }
+        }
+    }
+
+    #[test]
+    fn tray_size_tracks_windows_dpi_scale() {
+        assert_eq!(TrayIconSize::for_scale_factor(1.0), TrayIconSize::Px16);
+        assert_eq!(TrayIconSize::for_scale_factor(1.25), TrayIconSize::Px20);
+        assert_eq!(TrayIconSize::for_scale_factor(1.5), TrayIconSize::Px24);
+        assert_eq!(TrayIconSize::for_scale_factor(2.0), TrayIconSize::Px32);
+    }
+
+    #[test]
+    #[ignore = "manual visual QA artifact"]
+    fn export_tray_preview_matrix() {
+        const SCALE: usize = 3;
+        const CELL_ICON_SIZE: usize = 32 * SCALE;
+        const CELL_GAP: usize = 16;
+        const CELL_WIDTH: usize = CELL_ICON_SIZE * 2 + CELL_GAP;
+        const CELL_HEIGHT: usize = CELL_ICON_SIZE + CELL_GAP;
+        let values = [0, 9, 23, 74, 91, 100];
+        let sizes = [
+            TrayIconSize::Px16,
+            TrayIconSize::Px20,
+            TrayIconSize::Px24,
+            TrayIconSize::Px32,
+        ];
+        let width = CELL_WIDTH * values.len();
+        let height = CELL_HEIGHT * sizes.len();
+        let mut rgb = vec![28_u8; width * height * 3];
+
+        for (row, size) in sizes.into_iter().enumerate() {
+            for (column, value) in values.into_iter().enumerate() {
+                let raster = render_tray_raster(value, size);
+                let icon_extent = raster.size * SCALE;
+                let top = row * CELL_HEIGHT + (CELL_ICON_SIZE - icon_extent) / 2;
+                let left = column * CELL_WIDTH + (CELL_ICON_SIZE - icon_extent) / 2;
+                for light_background in [false, true] {
+                    let panel_left = left
+                        + if light_background {
+                            CELL_ICON_SIZE + CELL_GAP
+                        } else {
+                            0
+                        };
+                    let background = if light_background { 242_u8 } else { 28_u8 };
+                    for y in 0..icon_extent {
+                        for x in 0..icon_extent {
+                            let source_x = x / SCALE;
+                            let source_y = y / SCALE;
+                            let source = (source_y * raster.size + source_x) * 4;
+                            let alpha = raster.rgba[source + 3] as u16;
+                            let destination = ((top + y) * width + panel_left + x) * 3;
+                            for channel in 0..3 {
+                                rgb[destination + channel] =
+                                    ((raster.rgba[source + channel] as u16 * alpha
+                                        + background as u16 * (255 - alpha))
+                                        / 255) as u8;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        let output = std::env::var_os("MEROA_TRAY_PREVIEW")
+            .map(PathBuf::from)
+            .unwrap_or_else(|| PathBuf::from("target/tray-preview.bmp"));
+        if let Some(parent) = output.parent() {
+            fs::create_dir_all(parent).expect("create tray preview directory");
+        }
+        let row_stride = (width * 3 + 3) & !3;
+        let pixel_bytes = row_stride * height;
+        let mut bmp = Vec::with_capacity(54 + pixel_bytes);
+        bmp.extend(b"BM");
+        bmp.extend(((54 + pixel_bytes) as u32).to_le_bytes());
+        bmp.extend([0_u8; 4]);
+        bmp.extend(54_u32.to_le_bytes());
+        bmp.extend(40_u32.to_le_bytes());
+        bmp.extend((width as i32).to_le_bytes());
+        bmp.extend((height as i32).to_le_bytes());
+        bmp.extend(1_u16.to_le_bytes());
+        bmp.extend(24_u16.to_le_bytes());
+        bmp.extend([0_u8; 24]);
+        for row in (0..height).rev() {
+            let start = row * width * 3;
+            let (pixels, remainder) = rgb[start..start + width * 3].as_chunks::<3>();
+            assert!(remainder.is_empty());
+            for pixel in pixels {
+                bmp.extend([pixel[2], pixel[1], pixel[0]]);
+            }
+            bmp.extend(std::iter::repeat_n(0, row_stride - width * 3));
+        }
+        fs::write(&output, bmp).expect("write tray preview");
+        println!("{}", output.display());
     }
 
     #[test]
