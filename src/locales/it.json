@@ -1,0 +1,24 @@
+{
+  "app": { "popoverLabel": "Riepilogo utilizzo MEROA" },
+  "common": { "refresh": "Aggiorna", "more": "Altre opzioni" },
+  "status": { "safe": "Sicuro", "safeDescription": "Sicuro. A questo ritmo, sei in linea." },
+  "usage": {
+    "remaining": "Rimanente",
+    "fiveHours": "5 Ore",
+    "weekly": "Settimanale",
+    "credits": "Crediti",
+    "reset": "Ripristino",
+    "resetValue": "3g 14h",
+    "updatedNow": "Aggiornato ora",
+    "metricsLabel": "Finestre di utilizzo"
+  },
+  "menu": {
+    "label": "Menu rapido",
+    "protectUsage": "Proteggi utilizzo",
+    "alerts": "Avvisi",
+    "refresh": "Aggiorna",
+    "settings": "Impostazioni",
+    "about": "Informazioni",
+    "quit": "Esci"
+  }
+}

@@ -1,0 +1,24 @@
+{
+  "app": { "popoverLabel": "MEROA usage overview" },
+  "common": { "refresh": "Refresh", "more": "More options" },
+  "status": { "safe": "Safe", "safeDescription": "Safe. At this pace, you're on track." },
+  "usage": {
+    "remaining": "Remaining",
+    "fiveHours": "5 Hours",
+    "weekly": "Weekly",
+    "credits": "Credits",
+    "reset": "Reset",
+    "resetValue": "3d 14h",
+    "updatedNow": "Updated now",
+    "metricsLabel": "Usage windows"
+  },
+  "menu": {
+    "label": "Quick menu",
+    "protectUsage": "Protect usage",
+    "alerts": "Alerts",
+    "refresh": "Refresh",
+    "settings": "Settings",
+    "about": "About",
+    "quit": "Quit"
+  }
+}
