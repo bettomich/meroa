@@ -1,5 +1,6 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { invoke, isTauri } from "@tauri-apps/api/core";
+import { listen } from "@tauri-apps/api/event";
 import { DottedGauge } from "./components/DottedGauge";
 import { Icon } from "./components/Icon";
 import { MetricRow } from "./components/MetricRow";
@@ -12,6 +13,7 @@ export function App() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const refreshTimer = useRef<number | undefined>(undefined);
+  const stageRef = useRef<HTMLElement>(null);
 
   const closePopover = useCallback(async () => {
     setMenuOpen(false);
@@ -38,16 +40,63 @@ export function App() {
     };
   }, [closePopover, menuOpen]);
 
+  useLayoutEffect(() => {
+    if (!isTauri()) return;
+
+    const stage = stageRef.current;
+    if (!stage) return;
+
+    let animationFrame = 0;
+    let lastSize = "";
+    const syncGeometry = () => {
+      window.cancelAnimationFrame(animationFrame);
+      animationFrame = window.requestAnimationFrame(() => {
+        const bounds = stage.getBoundingClientRect();
+        const width = Math.ceil(bounds.width);
+        const height = Math.ceil(bounds.height);
+        const nextSize = `${width}x${height}`;
+        if (nextSize === lastSize) return;
+        lastSize = nextSize;
+        void invoke<number>("sync_popover_geometry", { width, height }).then((pointerX) => {
+          stage.style.setProperty("--pointer-x", `${pointerX}px`);
+        });
+      });
+    };
+
+    const observer = new ResizeObserver(syncGeometry);
+    observer.observe(stage);
+    void document.fonts.ready.then(syncGeometry);
+    syncGeometry();
+
+    return () => {
+      observer.disconnect();
+      window.cancelAnimationFrame(animationFrame);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!isTauri()) return;
+    let unlisten: (() => void) | undefined;
+    void listen<number>("popover-pointer", ({ payload }) => {
+      stageRef.current?.style.setProperty("--pointer-x", `${payload}px`);
+    }).then((stopListening) => {
+      unlisten = stopListening;
+    });
+    return () => unlisten?.();
+  }, []);
+
   return (
-    <main className="app-stage">
+    <main className="app-stage" ref={stageRef}>
       <section className="popover" aria-label={t("app.popoverLabel")}>
         <header className="popover__header">
-          <div className="brand">MEROA</div>
-          <div className="header-actions">
+          <div className="identity">
+            <div className="brand">MEROA</div>
             <div className="status" aria-label={t("status.safeDescription")}>
               <span className="status__dot" aria-hidden="true" />
               <span>{t("status.safe")}</span>
             </div>
+          </div>
+          <div className="header-actions">
             <button
               className="icon-button"
               type="button"
@@ -82,7 +131,6 @@ export function App() {
             icon="cursor"
             label={t("usage.credits")}
             value={String(mockUsage.credits)}
-            developmentOnly
           />
           <MetricRow icon="reset" label={t("usage.reset")} value={t("usage.resetValue")} />
         </div>
@@ -99,6 +147,7 @@ export function App() {
 
         {menuOpen ? <QuickMenu onClose={() => setMenuOpen(false)} onRefresh={refresh} /> : null}
       </section>
+      <span className="popover-pointer" aria-hidden="true" />
     </main>
   );
 }
