@@ -17,7 +17,7 @@
 * { box-sizing: border-box; }
 
 :root {
-  font-family: "Space Grotesk", sans-serif;
+  font-family: "Space Grotesk";
   color: #f2f2f2;
   font-synthesis: none;
   text-rendering: geometricPrecision;
@@ -182,7 +182,7 @@ button:focus-visible {
   align-items: flex-end;
   justify-content: center;
   color: var(--text-primary);
-  font-family: "Doto", monospace;
+  font-family: "Doto";
   font-variation-settings: "ROND" 100, "wght" 650;
   font-size: 57px;
   line-height: .82;
@@ -191,7 +191,7 @@ button:focus-visible {
 
 .gauge__value small {
   margin: 0 0 3px 2px;
-  font-family: "Space Grotesk", sans-serif;
+  font-family: "Space Grotesk";
   font-size: 18px;
   font-weight: 350;
   letter-spacing: 0;
