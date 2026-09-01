@@ -2,8 +2,17 @@
   "app": { "popoverLabel": "Riepilogo utilizzo MEROA" },
   "common": { "refresh": "Aggiorna", "more": "Altre opzioni" },
   "status": { "safe": "Sicuro", "safeDescription": "Sicuro. A questo ritmo, sei in linea." },
+  "state": {
+    "live": "Live",
+    "loading": "Caricamento",
+    "available": "Live",
+    "unavailable": "Non disponibile",
+    "error": "Errore",
+    "stale": "Dati non aggiornati"
+  },
   "usage": {
     "remaining": "Rimanente",
+    "limiting": "Limitante",
     "fiveHours": "5 Ore",
     "weekly": "Settimanale",
     "credits": "Crediti",

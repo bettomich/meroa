@@ -1,8 +1,14 @@
 # MEROA
 
-MEROA is a local, tray-first Windows utility for understanding and planning Codex usage.
+MEROA is a local, tray-first Windows utility for understanding Codex usage.
 
-This repository currently contains **Milestone 1** only: the Tauri 2 shell, dynamic tray indicator, compact React popover, mock usage data, and the Italian/English localization structure. It intentionally does not include the real Codex provider, Reserve/Pace, alerts, or cloud services.
+The current build includes the approved Milestone 1 shell and the Milestone 2
+local data provider. Real 5 Hours, Weekly, reset, and Credits values come from
+the installed Codex app-server. The Hero and stable Windows tray icon display
+the limiting window. See [the data-source notes](docs/CODEX_USAGE_SOURCE.md).
+
+MEROA does not include Reserve/Pace, alerts, account management, analytics, or
+cloud services.
 
 ## Development
 

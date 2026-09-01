@@ -1,4 +1,15 @@
-use std::sync::Mutex;
+mod codex_usage;
+
+use codex_usage::{CodexUsage, FetchError};
+use serde::Serialize;
+use std::{
+    sync::{
+        atomic::{AtomicBool, Ordering},
+        Mutex,
+    },
+    thread,
+    time::Duration,
+};
 use tauri::{
     image::Image,
     menu::{CheckMenuItem, Menu, MenuItem, PredefinedMenuItem},
@@ -17,6 +28,39 @@ struct TrayAnchor {
 #[derive(Default)]
 struct PopoverState {
     anchor: Mutex<Option<TrayAnchor>>,
+}
+
+#[derive(Clone, Debug, Serialize)]
+#[serde(tag = "status", rename_all = "camelCase")]
+enum UsageStatus {
+    Loading,
+    Available { data: CodexUsage },
+    Unavailable { message: String },
+    Error { message: String },
+    Stale { data: CodexUsage, message: String },
+}
+
+impl UsageStatus {
+    fn data(&self) -> Option<&CodexUsage> {
+        match self {
+            Self::Available { data } | Self::Stale { data, .. } => Some(data),
+            _ => None,
+        }
+    }
+}
+
+struct UsageStore {
+    current: Mutex<UsageStatus>,
+    refresh_in_progress: AtomicBool,
+}
+
+impl Default for UsageStore {
+    fn default() -> Self {
+        Self {
+            current: Mutex::new(UsageStatus::Loading),
+            refresh_in_progress: AtomicBool::new(false),
+        }
+    }
 }
 
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -133,6 +177,32 @@ fn sync_popover_geometry(app: AppHandle, width: f64, height: f64) -> Result<f64,
         .map_err(|error| error.to_string())?;
     let fallback = width / 2.0;
     Ok(position_popover(&app).unwrap_or(fallback))
+}
+
+#[tauri::command]
+fn get_usage_state(app: AppHandle) -> UsageStatus {
+    app.state::<UsageStore>()
+        .current
+        .lock()
+        .map(|state| state.clone())
+        .unwrap_or_else(|_| UsageStatus::Error {
+            message: "MEROA usage state is unavailable.".into(),
+        })
+}
+
+#[tauri::command]
+async fn refresh_usage(app: AppHandle) -> UsageStatus {
+    let app_for_refresh = app.clone();
+    match tauri::async_runtime::spawn_blocking(move || refresh_usage_now(&app_for_refresh)).await {
+        Ok(status) => status,
+        Err(error) => {
+            let status = UsageStatus::Error {
+                message: format!("Could not refresh Codex usage: {error}"),
+            };
+            publish_usage_status(&app, status.clone());
+            status
+        }
+    }
 }
 
 fn toggle_popover(app: &AppHandle) {
@@ -415,19 +485,142 @@ fn render_tray_icon(value: u8, icon_size: TrayIconSize) -> Image<'static> {
     Image::new_owned(raster.rgba, raster.size as u32, raster.size as u32)
 }
 
+fn render_unavailable_tray_icon(icon_size: TrayIconSize) -> Image<'static> {
+    let size = icon_size.pixels();
+    let mut rgba = vec![0_u8; size * size * 4];
+    let mut mask = vec![false; size * size];
+    let scale = match size {
+        16 | 20 => 1,
+        24 => 2,
+        32 => 3,
+        _ => 1,
+    };
+    let dash_width = 4 * scale;
+    let gap = scale + 1;
+    let total_width = dash_width * 2 + gap;
+    let origin_x = (size as i32 - total_width) / 2;
+    let origin_y = size as i32 / 2 - scale / 2;
+    for dash in 0..2 {
+        for y in 0..scale {
+            for x in 0..dash_width {
+                set_mask_pixel(
+                    &mut mask,
+                    size,
+                    origin_x + dash * (dash_width + gap) + x,
+                    origin_y + y,
+                );
+            }
+        }
+    }
+    paint_number(&mut rgba, &mask, size);
+    Image::new_owned(rgba, size as u32, size as u32)
+}
+
+fn tray_icon_size(app: &AppHandle) -> TrayIconSize {
+    app.primary_monitor()
+        .ok()
+        .flatten()
+        .map(|monitor| TrayIconSize::for_scale_factor(monitor.scale_factor()))
+        .unwrap_or(TrayIconSize::Px16)
+}
+
+fn tray_value(status: &UsageStatus) -> Option<u8> {
+    status
+        .data()
+        .map(|data| data.limiting_window.remaining_percent)
+}
+
+fn update_tray_usage(app: &AppHandle, status: &UsageStatus) {
+    let Some(tray) = app.tray_by_id("meroa-tray") else {
+        return;
+    };
+    let size = tray_icon_size(app);
+    if let (Some(data), Some(remaining)) = (status.data(), tray_value(status)) {
+        let window = match data.limiting_window.kind {
+            codex_usage::WindowKind::FiveHours => "5 Hours",
+            codex_usage::WindowKind::Weekly => "Weekly",
+        };
+        let freshness = if matches!(status, UsageStatus::Stale { .. }) {
+            " (stale)"
+        } else {
+            ""
+        };
+        let _ = tray.set_icon(Some(render_tray_icon(remaining, size)));
+        let _ = tray.set_tooltip(Some(format!(
+            "MEROA — {remaining}% remaining · {window}{freshness}"
+        )));
+    } else {
+        let _ = tray.set_icon(Some(render_unavailable_tray_icon(size)));
+        let _ = tray.set_tooltip(Some("MEROA — Codex usage unavailable"));
+    }
+}
+
+fn publish_usage_status(app: &AppHandle, status: UsageStatus) {
+    if let Ok(mut current) = app.state::<UsageStore>().current.lock() {
+        *current = status.clone();
+    }
+    update_tray_usage(app, &status);
+    let _ = app.emit("usage-updated", status);
+}
+
+fn refresh_usage_now(app: &AppHandle) -> UsageStatus {
+    let store = app.state::<UsageStore>();
+    if store.refresh_in_progress.swap(true, Ordering::AcqRel) {
+        return store
+            .current
+            .lock()
+            .map(|state| state.clone())
+            .unwrap_or_else(|_| UsageStatus::Error {
+                message: "MEROA usage state is unavailable.".into(),
+            });
+    }
+
+    let previous = store
+        .current
+        .lock()
+        .map(|state| state.clone())
+        .unwrap_or(UsageStatus::Loading);
+    let status = match codex_usage::fetch_usage() {
+        Ok(data) => UsageStatus::Available { data },
+        Err(error) => {
+            if let Some(data) = previous.data().cloned() {
+                UsageStatus::Stale {
+                    data,
+                    message: error.message().to_string(),
+                }
+            } else {
+                match error {
+                    FetchError::Unavailable(message) => UsageStatus::Unavailable { message },
+                    FetchError::Source(message) => UsageStatus::Error { message },
+                }
+            }
+        }
+    };
+    store.refresh_in_progress.store(false, Ordering::Release);
+    publish_usage_status(app, status.clone());
+    status
+}
+
+fn start_usage_refresh(app: AppHandle) {
+    thread::spawn(move || loop {
+        refresh_usage_now(&app);
+        thread::sleep(Duration::from_secs(5 * 60));
+    });
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
         .manage(PopoverState::default())
+        .manage(UsageStore::default())
         .invoke_handler(tauri::generate_handler![
             hide_popover,
-            sync_popover_geometry
+            sync_popover_geometry,
+            get_usage_state,
+            refresh_usage
         ])
         .setup(|app| {
-            let tray_icon_size = app
-                .primary_monitor()?
-                .map(|monitor| TrayIconSize::for_scale_factor(monitor.scale_factor()))
-                .unwrap_or(TrayIconSize::Px16);
+            let tray_icon_size = tray_icon_size(app.handle());
             let open = MenuItem::with_id(app, "open", "Open", true, None::<&str>)?;
             let refresh = MenuItem::with_id(app, "refresh", "Refresh", true, None::<&str>)?;
             let startup = CheckMenuItem::with_id(
@@ -447,8 +640,8 @@ pub fn run() {
             )?;
 
             TrayIconBuilder::with_id("meroa-tray")
-                .tooltip("MEROA — 74% remaining")
-                .icon(render_tray_icon(74, tray_icon_size))
+                .tooltip("MEROA — Loading Codex usage")
+                .icon(render_unavailable_tray_icon(tray_icon_size))
                 .menu(&menu)
                 .show_menu_on_left_click(false)
                 .on_tray_icon_event(|tray, event| {
@@ -471,6 +664,12 @@ pub fn run() {
                 })
                 .on_menu_event(|app, event| match event.id.as_ref() {
                     "open" => toggle_popover(app),
+                    "refresh" => {
+                        let app = app.clone();
+                        thread::spawn(move || {
+                            refresh_usage_now(&app);
+                        });
+                    }
                     "quit" => app.exit(0),
                     _ => {}
                 })
@@ -489,6 +688,7 @@ pub fn run() {
                     _ => {}
                 });
             }
+            start_usage_refresh(app.handle().clone());
             Ok(())
         })
         .run(tauri::generate_context!())
@@ -499,7 +699,11 @@ pub fn run() {
 mod tests {
     use std::{fs, path::PathBuf};
 
-    use super::{calculate_popover_layout, render_tray_raster, TrayAnchor, TrayIconSize, WorkArea};
+    use super::{
+        calculate_popover_layout,
+        codex_usage::{CodexUsage, LimitingWindow, WindowKind},
+        render_tray_raster, tray_value, TrayAnchor, TrayIconSize, UsageStatus, WorkArea,
+    };
 
     #[test]
     fn tray_renderer_covers_values_and_native_sizes() {
@@ -526,6 +730,25 @@ mod tests {
         assert_eq!(TrayIconSize::for_scale_factor(1.25), TrayIconSize::Px20);
         assert_eq!(TrayIconSize::for_scale_factor(1.5), TrayIconSize::Px24);
         assert_eq!(TrayIconSize::for_scale_factor(2.0), TrayIconSize::Px32);
+    }
+
+    #[test]
+    fn tray_value_uses_the_limiting_window() {
+        let status = UsageStatus::Available {
+            data: CodexUsage {
+                five_hours: None,
+                weekly: None,
+                credits: None,
+                limiting_window: LimitingWindow {
+                    kind: WindowKind::Weekly,
+                    remaining_percent: 23,
+                    resets_at: None,
+                },
+                fetched_at: 123,
+            },
+        };
+        assert_eq!(tray_value(&status), Some(23));
+        assert_eq!(tray_value(&UsageStatus::Loading), None);
     }
 
     #[test]

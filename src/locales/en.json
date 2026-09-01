@@ -2,8 +2,17 @@
   "app": { "popoverLabel": "MEROA usage overview" },
   "common": { "refresh": "Refresh", "more": "More options" },
   "status": { "safe": "Safe", "safeDescription": "Safe. At this pace, you're on track." },
+  "state": {
+    "live": "Live",
+    "loading": "Loading",
+    "available": "Live",
+    "unavailable": "Unavailable",
+    "error": "Error",
+    "stale": "Stale data"
+  },
   "usage": {
     "remaining": "Remaining",
+    "limiting": "Limiting",
     "fiveHours": "5 Hours",
     "weekly": "Weekly",
     "credits": "Credits",

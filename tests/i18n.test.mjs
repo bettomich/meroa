@@ -23,10 +23,12 @@ test("English and Italian expose identical translation keys", async () => {
   assert.deepEqual(keys(it).sort(), keys(en).sort());
 });
 
-test("the approved mock values remain explicit development data", async () => {
-  const source = await readFile(new URL("src/mocks/usage.ts", root), "utf8");
-  assert.match(source, /remaining:\s*74/);
-  assert.match(source, /fiveHours:\s*61/);
-  assert.match(source, /weekly:\s*74/);
-  assert.match(source, /credits:\s*420/);
+test("the production UI is wired to the native Codex usage provider", async () => {
+  const [app, provider] = await Promise.all([
+    readFile(new URL("src/App.tsx", root), "utf8"),
+    readFile(new URL("src-tauri/src/codex_usage.rs", root), "utf8"),
+  ]);
+  assert.doesNotMatch(app, /mockUsage|mocks\/usage/);
+  assert.match(app, /invoke<UsageState>\("refresh_usage"\)/);
+  assert.match(provider, /account\/rateLimits\/read/);
 });
