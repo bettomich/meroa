@@ -1,4 +1,5 @@
-import { Icon, type IconName } from "./Icon";
+import { type IconName } from "./Icon";
+import { MetricIcon } from "./MetricIcon";
 
 interface MetricRowProps {
   icon: IconName;
@@ -9,7 +10,7 @@ interface MetricRowProps {
 export function MetricRow({ icon, label, value }: MetricRowProps) {
   return (
     <div className="metric-row">
-      <span className="metric-row__icon"><Icon name={icon} /></span>
+      <MetricIcon name={icon} />
       <span className="metric-row__label">{label}</span>
       <span className="metric-row__value">{value}</span>
     </div>

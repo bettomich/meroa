@@ -39,3 +39,16 @@ test("the hero uses the real limiting value with a neutral remaining label", asy
   assert.match(app, /value=\{data\?\.limitingWindow\.remainingPercent \?\? null\}/);
   assert.doesNotMatch(app, /usage\.limiting/);
 });
+
+test("visual controls share the local icon system and secondary icon token", async () => {
+  const [icon, metricIcon, styles] = await Promise.all([
+    readFile(new URL("src/components/Icon.tsx", root), "utf8"),
+    readFile(new URL("src/components/MetricIcon.tsx", root), "utf8"),
+    readFile(new URL("src/styles/global.css", root), "utf8"),
+  ]);
+  assert.match(icon, /fill="currentColor"/);
+  assert.doesNotMatch(icon, /#000|black/);
+  assert.match(metricIcon, /className="metric-icon"/);
+  assert.match(styles, /--icon-secondary: var\(--text-secondary\)/);
+  assert.match(styles, /\.icon-button \{[\s\S]*?color: var\(--icon-secondary\)/);
+});
