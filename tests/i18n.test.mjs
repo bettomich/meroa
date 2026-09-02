@@ -32,3 +32,10 @@ test("the production UI is wired to the native Codex usage provider", async () =
   assert.match(app, /invoke<UsageState>\("refresh_usage"\)/);
   assert.match(provider, /account\/rateLimits\/read/);
 });
+
+test("the hero uses the real limiting value with a neutral remaining label", async () => {
+  const app = await readFile(new URL("src/App.tsx", root), "utf8");
+  assert.match(app, /const heroLabel = data \? t\("usage\.remaining"\)/);
+  assert.match(app, /value=\{data\?\.limitingWindow\.remainingPercent \?\? null\}/);
+  assert.doesNotMatch(app, /usage\.limiting/);
+});

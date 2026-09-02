@@ -109,12 +109,7 @@ export function App() {
   }, []);
 
   const data = usageData(usageState);
-  const limitingLabel = data
-    ? t(data.limitingWindow.kind === "fiveHours" ? "usage.fiveHours" : "usage.weekly")
-    : null;
-  const heroLabel = limitingLabel
-    ? `${limitingLabel} · ${t("usage.limiting")}`
-    : t(`state.${usageState.status}`);
+  const heroLabel = data ? t("usage.remaining") : t(`state.${usageState.status}`);
   const stateMessage = "message" in usageState ? usageState.message : undefined;
   const freshnessText = usageState.status === "available"
     ? t("usage.updatedNow")
@@ -193,9 +188,6 @@ export function App() {
             <span className="freshness__dot" aria-hidden="true" />
             <span>{freshnessText}</span>
           </div>
-          <button className="icon-button" type="button" aria-label={t("common.refresh")} onClick={() => void refresh()}>
-            <Icon name="refresh" className={isRefreshing ? "is-spinning" : ""} />
-          </button>
         </footer>
 
         {menuOpen ? <QuickMenu onClose={() => setMenuOpen(false)} onRefresh={() => void refresh()} /> : null}
