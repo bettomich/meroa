@@ -8,7 +8,7 @@ use std::{
         Mutex,
     },
     thread,
-    time::Duration,
+    time::{Duration, Instant, SystemTime, UNIX_EPOCH},
 };
 use tauri::{
     image::Image,
@@ -18,6 +18,8 @@ use tauri::{
 };
 
 const POPOVER_LABEL: &str = "main";
+const AUTO_REFRESH_INTERVAL: Duration = Duration::from_secs(5 * 60);
+const STALE_AFTER: Duration = Duration::from_secs(10 * 60);
 
 #[derive(Clone, Copy, Debug)]
 struct TrayAnchor {
@@ -52,6 +54,42 @@ impl UsageStatus {
 struct UsageStore {
     current: Mutex<UsageStatus>,
     refresh_in_progress: AtomicBool,
+    next_refresh_at: Mutex<Instant>,
+    tray_language: Mutex<TrayLanguage>,
+    tray_mode: Mutex<TrayMode>,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum TrayLanguage {
+    English,
+    Italian,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum TrayMode {
+    Auto,
+    FiveHours,
+    Weekly,
+}
+
+impl TrayMode {
+    fn from_mode(mode: &str) -> Self {
+        match mode {
+            "fiveHours" => Self::FiveHours,
+            "weekly" => Self::Weekly,
+            _ => Self::Auto,
+        }
+    }
+}
+
+impl TrayLanguage {
+    fn from_language(language: &str) -> Self {
+        if language.eq_ignore_ascii_case("it") || language.starts_with("it-") {
+            Self::Italian
+        } else {
+            Self::English
+        }
+    }
 }
 
 impl Default for UsageStore {
@@ -59,6 +97,9 @@ impl Default for UsageStore {
         Self {
             current: Mutex::new(UsageStatus::Loading),
             refresh_in_progress: AtomicBool::new(false),
+            next_refresh_at: Mutex::new(Instant::now()),
+            tray_language: Mutex::new(TrayLanguage::English),
+            tray_mode: Mutex::new(TrayMode::Auto),
         }
     }
 }
@@ -205,6 +246,24 @@ async fn refresh_usage(app: AppHandle) -> UsageStatus {
     }
 }
 
+#[tauri::command]
+fn set_tray_language(app: AppHandle, language: String) {
+    if let Ok(mut tray_language) = app.state::<UsageStore>().tray_language.lock() {
+        *tray_language = TrayLanguage::from_language(&language);
+    }
+    let status = get_usage_state(app.clone());
+    update_tray_usage(&app, &status);
+}
+
+#[tauri::command]
+fn set_tray_mode(app: AppHandle, mode: String) {
+    if let Ok(mut tray_mode) = app.state::<UsageStore>().tray_mode.lock() {
+        *tray_mode = TrayMode::from_mode(&mode);
+    }
+    let status = get_usage_state(app.clone());
+    update_tray_usage(&app, &status);
+}
+
 fn toggle_popover(app: &AppHandle) {
     let Some(window) = app.get_webview_window(POPOVER_LABEL) else {
         return;
@@ -226,13 +285,6 @@ fn draw_pixel(buffer: &mut [u8], width: usize, x: i32, y: i32, color: [u8; 4]) {
     }
     let index = (y as usize * width + x as usize) * 4;
     buffer[index..index + 4].copy_from_slice(&color);
-}
-
-fn draw_dot(buffer: &mut [u8], width: usize, x: i32, y: i32, color: [u8; 4]) {
-    draw_pixel(buffer, width, x, y, color);
-    draw_pixel(buffer, width, x + 1, y, color);
-    draw_pixel(buffer, width, x, y + 1, color);
-    draw_pixel(buffer, width, x + 1, y + 1, color);
 }
 
 const GLYPHS_3X5: [[u8; 15]; 10] = [
@@ -318,90 +370,6 @@ fn stamp_digit(
     }
 }
 
-fn stamp_standard_value(mask: &mut [bool], size: usize, value: u8) {
-    let digits: Vec<u8> = if value >= 10 {
-        vec![value / 10, value % 10]
-    } else {
-        vec![value]
-    };
-    let scale = match (size, digits.len()) {
-        (16, 1) => 3,
-        (16 | 20, 2) => 2,
-        (20, 1) => 3,
-        (24, 1) => 4,
-        (24, 2) => 3,
-        (32, 1) => 5,
-        (32, 2) => 4,
-        _ => 2,
-    };
-    let glyph_width = 3 * scale;
-    let gap = 1;
-    let total_width = glyph_width * digits.len() as i32 + gap * (digits.len() as i32 - 1);
-    let total_height = 5 * scale;
-    let origin_x = (size as i32 - total_width) / 2;
-    let origin_y = (size as i32 - total_height) / 2;
-    for (index, digit) in digits.into_iter().enumerate() {
-        stamp_digit(
-            mask,
-            size,
-            digit,
-            origin_x + index as i32 * (glyph_width + gap),
-            origin_y,
-            scale,
-            scale,
-        );
-    }
-}
-
-fn stamp_hundred(mask: &mut [bool], size: usize) {
-    match size {
-        16 => {
-            // Dedicated micro-layout: a dominant 1 followed by two stacked zeroes.
-            stamp_digit(mask, size, 1, 1, 3, 2, 2);
-            stamp_digit(mask, size, 0, 11, 1, 1, 1);
-            stamp_digit(mask, size, 0, 11, 10, 1, 1);
-        }
-        20 | 24 => {
-            // 5x7-inspired 100: narrow horizontal pixels, doubled vertically.
-            const ROWS: [&str; 7] = [
-                "01110 01110 01110",
-                "00110 10001 10001",
-                "00110 10001 10001",
-                "00110 10001 10001",
-                "00110 10001 10001",
-                "00110 10001 10001",
-                "11111 01110 01110",
-            ];
-            let origin_x = (size as i32 - 17) / 2;
-            let origin_y = (size as i32 - 14) / 2;
-            for (row, pattern) in ROWS.iter().enumerate() {
-                for (column, bit) in pattern.bytes().filter(|bit| *bit != b' ').enumerate() {
-                    if bit == b'1' {
-                        set_mask_pixel(
-                            mask,
-                            size,
-                            origin_x + column as i32,
-                            origin_y + row as i32 * 2,
-                        );
-                        set_mask_pixel(
-                            mask,
-                            size,
-                            origin_x + column as i32,
-                            origin_y + row as i32 * 2 + 1,
-                        );
-                    }
-                }
-            }
-        }
-        32 => {
-            for (index, digit) in [1_u8, 0, 0].into_iter().enumerate() {
-                stamp_digit(mask, size, digit, 1 + index as i32 * 10, 8, 3, 3);
-            }
-        }
-        _ => unreachable!("unsupported tray icon size"),
-    }
-}
-
 fn paint_number(buffer: &mut [u8], mask: &[bool], size: usize) {
     let outline = [0, 0, 0, 245];
     let white = [255, 255, 255, 255];
@@ -430,52 +398,52 @@ fn paint_number(buffer: &mut [u8], mask: &[bool], size: usize) {
     }
 }
 
-fn paint_ring(buffer: &mut [u8], size: usize, value: u8) {
-    let dot_count = match size {
-        16 => return,
-        20 => 4,
-        24 => 12,
-        32 => 20,
-        _ => unreachable!("unsupported tray icon size"),
+fn stamp_single_tray_value(mask: &mut [bool], size: usize, value: u8) {
+    let digits: Vec<u8> = if value == 100 {
+        vec![1, 0, 0]
+    } else if value >= 10 {
+        vec![value / 10, value % 10]
+    } else {
+        vec![value]
     };
-    let center = (size as f64 - 1.0) / 2.0;
-    let radius = center - if size == 20 { 1.0 } else { 0.5 };
-    let active = (value.min(100) as usize * dot_count + 50) / 100;
-    let accent_count = if size >= 24 { 2 } else { 1 };
-    for index in 0..dot_count {
-        let angle =
-            index as f64 / dot_count as f64 * std::f64::consts::TAU - std::f64::consts::FRAC_PI_2;
-        let x = (center + angle.cos() * radius).round() as i32;
-        let y = (center + angle.sin() * radius).round() as i32;
-        let color = if index < active {
-            if index + accent_count >= active {
-                [89, 214, 111, 255]
-            } else {
-                [224, 224, 224, 255]
-            }
-        } else {
-            [105, 105, 105, 235]
-        };
-        draw_pixel(buffer, size, x, y, [0, 0, 0, 230]);
-        if size == 32 {
-            draw_dot(buffer, size, x - 1, y - 1, color);
-        } else {
-            draw_pixel(buffer, size, x, y, color);
-        }
+    let (scale_x, scale_y) = match (size, digits.len()) {
+        (16, 1) => (3, 3),
+        (16, 2) => (2, 2),
+        (16, 3) => (1, 2),
+        (20, 1) => (3, 3),
+        (20, 2) => (2, 3),
+        (20, 3) => (1, 3),
+        (24, 1) => (4, 4),
+        (24, 2) => (3, 3),
+        (24, 3) => (2, 3),
+        (32, 1) => (5, 5),
+        (32, 2) => (4, 4),
+        (32, 3) => (3, 4),
+        _ => (1, 1),
+    };
+    let gap = 1;
+    let total_width = digits.len() as i32 * 3 * scale_x + (digits.len() as i32 - 1) * gap;
+    let total_height = 5 * scale_y;
+    let origin_x = (size as i32 - total_width) / 2;
+    let origin_y = (size as i32 - total_height) / 2;
+    for (index, digit) in digits.into_iter().enumerate() {
+        stamp_digit(
+            mask,
+            size,
+            digit,
+            origin_x + index as i32 * (3 * scale_x + gap),
+            origin_y,
+            scale_x,
+            scale_y,
+        );
     }
 }
 
 fn render_tray_raster(value: u8, icon_size: TrayIconSize) -> TrayRaster {
     let size = icon_size.pixels();
-    let value = value.min(100);
     let mut rgba = vec![0_u8; size * size * 4];
-    paint_ring(&mut rgba, size, value);
     let mut number_mask = vec![false; size * size];
-    if value == 100 {
-        stamp_hundred(&mut number_mask, size);
-    } else {
-        stamp_standard_value(&mut number_mask, size, value);
-    }
+    stamp_single_tray_value(&mut number_mask, size, value.min(100));
     paint_number(&mut rgba, &number_mask, size);
     TrayRaster { rgba, size }
 }
@@ -524,10 +492,23 @@ fn tray_icon_size(app: &AppHandle) -> TrayIconSize {
         .unwrap_or(TrayIconSize::Px16)
 }
 
-fn tray_value(status: &UsageStatus) -> Option<u8> {
-    status
-        .data()
-        .map(|data| data.limiting_window.remaining_percent)
+fn tray_values(status: &UsageStatus) -> Option<(u8, u8)> {
+    let data = status.data()?;
+    Some((
+        data.weekly.as_ref()?.remaining_percent,
+        data.five_hours.as_ref()?.remaining_percent,
+    ))
+}
+
+fn tray_value(data: &CodexUsage, mode: TrayMode) -> Option<u8> {
+    match mode {
+        TrayMode::Auto => Some(data.limiting_window.remaining_percent),
+        TrayMode::FiveHours => data
+            .five_hours
+            .as_ref()
+            .map(|window| window.remaining_percent),
+        TrayMode::Weekly => data.weekly.as_ref().map(|window| window.remaining_percent),
+    }
 }
 
 fn update_tray_usage(app: &AppHandle, status: &UsageStatus) {
@@ -535,20 +516,28 @@ fn update_tray_usage(app: &AppHandle, status: &UsageStatus) {
         return;
     };
     let size = tray_icon_size(app);
-    if let (Some(data), Some(remaining)) = (status.data(), tray_value(status)) {
-        let window = match data.limiting_window.kind {
-            codex_usage::WindowKind::FiveHours => "5 Hours",
-            codex_usage::WindowKind::Weekly => "Weekly",
+    if let (Some(data), Some((weekly, five_hours))) = (status.data(), tray_values(status)) {
+        let language = app
+            .state::<UsageStore>()
+            .tray_language
+            .lock()
+            .map(|value| *value)
+            .unwrap_or(TrayLanguage::English);
+        let mode = app
+            .state::<UsageStore>()
+            .tray_mode
+            .lock()
+            .map(|value| *value)
+            .unwrap_or(TrayMode::Auto);
+        let Some(value) = tray_value(data, mode) else {
+            return;
         };
-        let freshness = if matches!(status, UsageStatus::Stale { .. }) {
-            " (stale)"
-        } else {
-            ""
+        let tooltip = match language {
+            TrayLanguage::Italian => format!("MEROA\n5 ore: {five_hours}%\nSettimanale: {weekly}%"),
+            TrayLanguage::English => format!("MEROA\n5 hours: {five_hours}%\nWeekly: {weekly}%"),
         };
-        let _ = tray.set_icon(Some(render_tray_icon(remaining, size)));
-        let _ = tray.set_tooltip(Some(format!(
-            "MEROA — {remaining}% remaining · {window}{freshness}"
-        )));
+        let _ = tray.set_icon(Some(render_tray_icon(value, size)));
+        let _ = tray.set_tooltip(Some(tooltip));
     } else {
         let _ = tray.set_icon(Some(render_unavailable_tray_icon(size)));
         let _ = tray.set_tooltip(Some("MEROA — Codex usage unavailable"));
@@ -561,6 +550,27 @@ fn publish_usage_status(app: &AppHandle, status: UsageStatus) {
     }
     update_tray_usage(app, &status);
     let _ = app.emit("usage-updated", status);
+}
+
+fn snapshot_is_stale(fetched_at: i64, now: SystemTime) -> bool {
+    let age = now
+        .duration_since(UNIX_EPOCH + Duration::from_secs(fetched_at.max(0) as u64))
+        .unwrap_or_default();
+    age >= STALE_AFTER
+}
+
+fn reset_auto_refresh(store: &UsageStore) {
+    if let Ok(mut deadline) = store.next_refresh_at.lock() {
+        *deadline = Instant::now() + AUTO_REFRESH_INTERVAL;
+    }
+}
+
+fn auto_refresh_due(store: &UsageStore, now: Instant) -> bool {
+    store
+        .next_refresh_at
+        .lock()
+        .map(|deadline| now >= *deadline)
+        .unwrap_or(false)
 }
 
 fn refresh_usage_now(app: &AppHandle) -> UsageStatus {
@@ -584,9 +594,14 @@ fn refresh_usage_now(app: &AppHandle) -> UsageStatus {
         Ok(data) => UsageStatus::Available { data },
         Err(error) => {
             if let Some(data) = previous.data().cloned() {
-                UsageStatus::Stale {
-                    data,
-                    message: error.message().to_string(),
+                if snapshot_is_stale(data.fetched_at, SystemTime::now()) {
+                    UsageStatus::Stale {
+                        data,
+                        message: error.message().to_string(),
+                    }
+                } else {
+                    // Keep the last valid snapshot live until it actually becomes stale.
+                    UsageStatus::Available { data }
                 }
             } else {
                 match error {
@@ -597,14 +612,22 @@ fn refresh_usage_now(app: &AppHandle) -> UsageStatus {
         }
     };
     store.refresh_in_progress.store(false, Ordering::Release);
+    reset_auto_refresh(&store);
     publish_usage_status(app, status.clone());
     status
 }
 
 fn start_usage_refresh(app: AppHandle) {
-    thread::spawn(move || loop {
+    thread::spawn(move || {
+        // Startup always loads a real snapshot immediately; subsequent calls share
+        // the same guarded refresh path as manual refreshes.
         refresh_usage_now(&app);
-        thread::sleep(Duration::from_secs(5 * 60));
+        loop {
+            thread::sleep(Duration::from_secs(1));
+            if auto_refresh_due(&app.state::<UsageStore>(), Instant::now()) {
+                refresh_usage_now(&app);
+            }
+        }
     });
 }
 
@@ -617,7 +640,9 @@ pub fn run() {
             hide_popover,
             sync_popover_geometry,
             get_usage_state,
-            refresh_usage
+            refresh_usage,
+            set_tray_language,
+            set_tray_mode
         ])
         .setup(|app| {
             let tray_icon_size = tray_icon_size(app.handle());
@@ -697,12 +722,17 @@ pub fn run() {
 
 #[cfg(test)]
 mod tests {
-    use std::{fs, path::PathBuf};
+    use std::{
+        fs,
+        path::PathBuf,
+        time::{Duration, Instant},
+    };
 
     use super::{
-        calculate_popover_layout,
+        auto_refresh_due, calculate_popover_layout,
         codex_usage::{CodexUsage, LimitingWindow, WindowKind},
-        render_tray_raster, tray_value, TrayAnchor, TrayIconSize, UsageStatus, WorkArea,
+        render_tray_raster, snapshot_is_stale, tray_value, tray_values, TrayAnchor, TrayIconSize,
+        TrayMode, UsageStatus, UsageStore, WorkArea,
     };
 
     #[test]
@@ -713,7 +743,7 @@ mod tests {
             TrayIconSize::Px24,
             TrayIconSize::Px32,
         ] {
-            for value in [0, 9, 23, 74, 91, 100] {
+            for value in [0, 2, 35, 74, 87, 100] {
                 let raster = render_tray_raster(value, size);
                 assert_eq!(raster.rgba.len(), size.pixels() * size.pixels() * 4);
                 let (pixels, remainder) = raster.rgba.as_chunks::<4>();
@@ -733,11 +763,21 @@ mod tests {
     }
 
     #[test]
-    fn tray_value_uses_the_limiting_window() {
+    fn tray_values_keep_weekly_first_and_five_hours_second() {
         let status = UsageStatus::Available {
             data: CodexUsage {
-                five_hours: None,
-                weekly: None,
+                five_hours: Some(super::codex_usage::UsageWindow {
+                    kind: WindowKind::FiveHours,
+                    used_percent: 13.0,
+                    remaining_percent: 87,
+                    resets_at: None,
+                }),
+                weekly: Some(super::codex_usage::UsageWindow {
+                    kind: WindowKind::Weekly,
+                    used_percent: 65.0,
+                    remaining_percent: 35,
+                    resets_at: None,
+                }),
                 credits: None,
                 limiting_window: LimitingWindow {
                     kind: WindowKind::Weekly,
@@ -747,8 +787,33 @@ mod tests {
                 fetched_at: 123,
             },
         };
-        assert_eq!(tray_value(&status), Some(23));
-        assert_eq!(tray_value(&UsageStatus::Loading), None);
+        assert_eq!(tray_values(&status), Some((35, 87)));
+        let data = status.data().unwrap();
+        assert_eq!(tray_value(data, TrayMode::Auto), Some(23));
+        assert_eq!(tray_value(data, TrayMode::FiveHours), Some(87));
+        assert_eq!(tray_value(data, TrayMode::Weekly), Some(35));
+        assert_eq!(tray_values(&UsageStatus::Loading), None);
+    }
+
+    #[test]
+    fn stale_state_starts_only_after_ten_minutes_without_a_valid_snapshot() {
+        let fetched_at = 1_000;
+        assert!(!snapshot_is_stale(
+            fetched_at,
+            std::time::UNIX_EPOCH + Duration::from_secs(1_599)
+        ));
+        assert!(snapshot_is_stale(
+            fetched_at,
+            std::time::UNIX_EPOCH + Duration::from_secs(1_600)
+        ));
+    }
+
+    #[test]
+    fn automatic_refresh_is_due_only_at_its_scheduled_deadline() {
+        let store = UsageStore::default();
+        assert!(auto_refresh_due(&store, Instant::now()));
+        super::reset_auto_refresh(&store);
+        assert!(!auto_refresh_due(&store, Instant::now()));
     }
 
     #[test]
@@ -759,7 +824,7 @@ mod tests {
         const CELL_GAP: usize = 16;
         const CELL_WIDTH: usize = CELL_ICON_SIZE * 2 + CELL_GAP;
         const CELL_HEIGHT: usize = CELL_ICON_SIZE + CELL_GAP;
-        let values = [0, 9, 23, 74, 91, 100];
+        let values = [0, 2, 35, 74, 87, 100];
         let sizes = [
             TrayIconSize::Px16,
             TrayIconSize::Px20,

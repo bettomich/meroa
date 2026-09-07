@@ -28,6 +28,8 @@
     "refresh": "Aggiorna",
     "settings": "Impostazioni",
     "about": "Informazioni",
-    "quit": "Esci"
+    "quit": "Esci",
+    "trayValue": "Valore nella barra",
+    "tray": { "auto": "Automatico", "fiveHours": "5 ore", "weekly": "Settimanale" }
   }
 }

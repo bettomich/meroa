@@ -5,14 +5,33 @@ interface MetricRowProps {
   icon: IconName;
   label: string;
   value: string;
+  selected: boolean;
+  onSelect: () => void;
 }
 
-export function MetricRow({ icon, label, value }: MetricRowProps) {
+function MetricValue({ value }: { value: string }) {
+  const isPercentage = value.endsWith("%");
+  const number = isPercentage ? value.slice(0, -1) : value;
+
   return (
-    <div className="metric-row">
+    <span className="metric-row__value">
+      <span className="metric-row__value-number">{number}</span>
+      {isPercentage ? <span className="metric-row__value-unit">%</span> : null}
+    </span>
+  );
+}
+
+export function MetricRow({ icon, label, value, selected, onSelect }: MetricRowProps) {
+  return (
+    <button
+      className={selected ? "metric-row is-selected" : "metric-row"}
+      type="button"
+      aria-pressed={selected}
+      onClick={onSelect}
+    >
       <MetricIcon name={icon} />
       <span className="metric-row__label">{label}</span>
-      <span className="metric-row__value">{value}</span>
-    </div>
+      <MetricValue value={value} />
+    </button>
   );
 }

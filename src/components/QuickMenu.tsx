@@ -1,10 +1,13 @@
 import { useEffect, useRef } from "react";
 import { Icon, type IconName } from "./Icon";
 import { useI18n } from "../i18n/I18nProvider";
+import type { TrayMode } from "../usage";
 
 interface QuickMenuProps {
   onClose: () => void;
   onRefresh: () => void;
+  trayMode: TrayMode;
+  onTrayModeChange: (mode: TrayMode) => void;
 }
 
 type MenuItem = { key: string; icon: IconName; action?: "refresh"; separator?: boolean };
@@ -18,7 +21,7 @@ const items: MenuItem[] = [
   { key: "quit", icon: "power", separator: true },
 ];
 
-export function QuickMenu({ onClose, onRefresh }: QuickMenuProps) {
+export function QuickMenu({ onClose, onRefresh, trayMode, onTrayModeChange }: QuickMenuProps) {
   const { t } = useI18n();
   const menuRef = useRef<HTMLDivElement>(null);
 
@@ -43,6 +46,21 @@ export function QuickMenu({ onClose, onRefresh }: QuickMenuProps) {
           <span>{t(`menu.${item.key}`)}</span>
         </button>
       ))}
+      <div className="quick-menu__tray-mode" role="group" aria-label={t("menu.trayValue")}>
+        <span className="quick-menu__section-label">{t("menu.trayValue")}</span>
+        {(["auto", "fiveHours", "weekly"] as const).map((mode) => (
+          <button
+            className="quick-menu__tray-option"
+            key={mode}
+            type="button"
+            aria-pressed={trayMode === mode}
+            onClick={() => onTrayModeChange(mode)}
+          >
+            <span aria-hidden="true">{trayMode === mode ? "✓" : ""}</span>
+            <span>{t(`menu.tray.${mode}`)}</span>
+          </button>
+        ))}
+      </div>
     </div>
   );
 }

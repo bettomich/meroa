@@ -28,6 +28,8 @@
     "refresh": "Refresh",
     "settings": "Settings",
     "about": "About",
-    "quit": "Quit"
+    "quit": "Quit",
+    "trayValue": "Tray value",
+    "tray": { "auto": "Automatic", "fiveHours": "5 hours", "weekly": "Weekly" }
   }
 }

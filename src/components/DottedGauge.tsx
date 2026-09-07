@@ -1,15 +1,17 @@
 interface DottedGaugeProps {
   value: number | null;
   label: string;
+  displayValue?: string | null;
 }
 
 const DOT_COUNT = 42;
 
-export function DottedGauge({ value, label }: DottedGaugeProps) {
+export function DottedGauge({ value, label, displayValue }: DottedGaugeProps) {
   const activeDots = value === null
     ? 0
     : Math.round((Math.min(100, Math.max(0, value)) / 100) * DOT_COUNT);
-  const ariaValue = value === null ? label : `${value}% ${label}`;
+  const shownValue = displayValue ?? (value === null ? "--" : `${value}%`);
+  const ariaValue = `${shownValue} ${label}`;
 
   return (
     <div className="gauge" role="img" aria-label={ariaValue}>
@@ -33,7 +35,7 @@ export function DottedGauge({ value, label }: DottedGaugeProps) {
       </svg>
       <div className="gauge__content">
         <div className={value === null ? "gauge__value gauge__value--empty" : "gauge__value"}>
-          <span>{value ?? "--"}</span>{value === null ? null : <small>%</small>}
+          <span>{shownValue}</span>
         </div>
         <div className="gauge__label">{label}</div>
       </div>
