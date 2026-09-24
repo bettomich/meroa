@@ -174,3 +174,13 @@ test("single-instance uses the existing show and positioning path without tray p
   assert.match(backend, /fn toggle_popover[\s\S]*?show_popover\(app\);/);
   assert.doesNotMatch(backend, /NIF_GUID|NOTIFYICON_VERSION_4|Shell_NotifyIconW|vendor\/tray-icon/);
 });
+
+test("menu action icons share the MEROA stroke language and keep exit unambiguous", async () => {
+  const icon = await readFile(new URL("src/components/Icon.tsx", root), "utf8");
+  assert.match(icon, /const menuStroke = \{/);
+  assert.match(icon, /settings: <><circle \{\.\.\.menuStroke\}/);
+  assert.match(icon, /info: <><circle \{\.\.\.menuStroke\}/);
+  assert.match(icon, /power: <><path \{\.\.\.menuStroke\} d="M5\.5 8\.7V4\.5h7v4\.2/);
+  assert.match(icon, /M10\.4 12h8\.1m-3-3 3 3-3 3/);
+  assert.doesNotMatch(icon, /power: <><path \{\.\.\.dottedStroke\}.*M7\.4 5\.9a8/);
+});

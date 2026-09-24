@@ -14,6 +14,12 @@ const dottedStroke = {
   strokeDasharray: "0.2 3",
 };
 
+const menuStroke = {
+  ...dottedStroke,
+  strokeWidth: 1.7,
+  strokeDasharray: "0.18 2.65",
+};
+
 const icons: Record<Exclude<IconName, "more">, React.ReactNode> = {
   refresh: <><path {...dottedStroke} d="M20 9.5a8 8 0 1 0-.4 6.2"/><path fill="currentColor" d="m19.6 5 .9 5.4-5.4-.9 2-1.2z"/></>,
   clock: <><circle {...dottedStroke} cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="1.05" fill="currentColor"/><path {...dottedStroke} d="M12 7.5v4.4l3.25 1.9"/></>,
@@ -22,9 +28,9 @@ const icons: Record<Exclude<IconName, "more">, React.ReactNode> = {
   reset: <><circle {...dottedStroke} cx="12" cy="12" r="8"/><path d="M12 7v5.5" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round"/><circle cx="12" cy="16.3" r=".95" fill="currentColor"/></>,
   shield: <path {...dottedStroke} d="M12 3.5 19.5 6.4v4.9c0 4.9-3 7.9-7.5 9.2-4.5-1.3-7.5-4.3-7.5-9.2V6.4z"/>,
   bell: <><path {...dottedStroke} d="M5.8 17h12.4l-1.4-2.5v-4.1a4.8 4.8 0 0 0-9.6 0v4.1z"/><path {...dottedStroke} d="M10 19.7h4"/></>,
-  settings: <><circle {...dottedStroke} cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="2.6" fill="none" stroke="currentColor" strokeWidth="1.5"/><path {...dottedStroke} d="M12 4v2.7m0 10.6V20M4 12h2.7m10.6 0H20M6.35 6.35l1.9 1.9m7.5 7.5 1.9 1.9m0-11.3-1.9 1.9m-7.5 7.5-1.9 1.9"/></>,
-  info: <><circle {...dottedStroke} cx="12" cy="12" r="8"/><circle cx="12" cy="8.2" r=".95" fill="currentColor"/><path {...dottedStroke} d="M12 11.2v5.3"/></>,
-  power: <><path {...dottedStroke} d="M7.4 5.9a8 8 0 1 0 9.2 0"/><path d="M12 3.8v8.5" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round"/></>,
+  settings: <><circle {...menuStroke} cx="12" cy="12" r="7.35"/><circle {...menuStroke} cx="12" cy="12" r="2.7"/><path {...menuStroke} d="M12 3.6v2.1m0 12.6v2.1M3.6 12h2.1m12.6 0h2.1M6.05 6.05l1.55 1.55m8.8 8.8 1.55 1.55m0-11.9-1.55 1.55m-8.8 8.8-1.55 1.55"/></>,
+  info: <><circle {...menuStroke} cx="12" cy="12" r="7.5"/><circle cx="12" cy="8.2" r=".9" fill="currentColor"/><path {...menuStroke} d="M12 11.15v5.15"/></>,
+  power: <><path {...menuStroke} d="M5.5 8.7V4.5h7v4.2m0 6.6v4.2h-7V15.3"/><path {...menuStroke} d="M10.4 12h8.1m-3-3 3 3-3 3"/></>,
 };
 
 export function Icon({ name, className = "" }: IconProps) {
