@@ -274,6 +274,14 @@ fn toggle_popover(app: &AppHandle) {
         return;
     }
 
+    show_popover(app);
+}
+
+fn show_popover(app: &AppHandle) {
+    let Some(window) = app.get_webview_window(POPOVER_LABEL) else {
+        return;
+    };
+
     let _ = position_popover(app);
     let _ = window.show();
     let _ = window.set_focus();
@@ -638,6 +646,9 @@ pub fn run() {
             tauri_plugin_autostart::MacosLauncher::LaunchAgent,
             None::<Vec<&str>>,
         ))
+        .plugin(tauri_plugin_single_instance::init(|app, _argv, _cwd| {
+            show_popover(app);
+        }))
         .manage(PopoverState::default())
         .manage(UsageStore::default())
         .invoke_handler(tauri::generate_handler![

@@ -161,3 +161,16 @@ test("autostart uses the official plugin as the system source of truth", async (
   assert.match(cargo, /tauri-plugin-autostart = "2"/);
   assert.match(capability, /autostart:default/);
 });
+
+test("single-instance uses the existing show and positioning path without tray patches", async () => {
+  const [backend, cargo] = await Promise.all([
+    readFile(new URL("src-tauri/src/lib.rs", root), "utf8"),
+    readFile(new URL("src-tauri/Cargo.toml", root), "utf8"),
+  ]);
+  assert.match(cargo, /tauri-plugin-single-instance = "2"/);
+  assert.match(backend, /tauri_plugin_single_instance::init\(\|app, _argv, _cwd\| \{\s*show_popover\(app\);/);
+  assert.match(backend, /fn show_popover\(app: &AppHandle\)/);
+  assert.match(backend, /let _ = position_popover\(app\);/);
+  assert.match(backend, /fn toggle_popover[\s\S]*?show_popover\(app\);/);
+  assert.doesNotMatch(backend, /NIF_GUID|NOTIFYICON_VERSION_4|Shell_NotifyIconW|vendor\/tray-icon/);
+});
