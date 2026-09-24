@@ -183,9 +183,13 @@ test("single-instance uses the existing show and positioning path without tray p
 test("menu action icons share the MEROA stroke language and keep exit unambiguous", async () => {
   const icon = await readFile(new URL("src/components/Icon.tsx", root), "utf8");
   assert.match(icon, /const menuStroke = \{/);
-  assert.match(icon, /settings: <><circle \{\.\.\.menuStroke\}/);
-  assert.match(icon, /info: <><circle \{\.\.\.menuStroke\}/);
-  assert.match(icon, /power: <><path \{\.\.\.menuStroke\} d="M5\.5 8\.7V4\.5h7v4\.2/);
-  assert.match(icon, /M10\.4 12h8\.1m-3-3 3 3-3 3/);
-  assert.doesNotMatch(icon, /power: <><path \{\.\.\.dottedStroke\}.*M7\.4 5\.9a8/);
+  assert.match(icon, /settings: <><path \{\.\.\.menuStroke\} d="M19\.43 12\.98/);
+  assert.match(icon, /settings:[\s\S]*?<circle \{\.\.\.menuStroke\} cx="13" cy="12" r="2\.5"/);
+  assert.match(icon, /info: <><circle \{\.\.\.menuStroke\} cx="12" cy="12" r="8\.7"/);
+  assert.match(icon, /info:[\s\S]*?d="M12 11\.1v5\.35"/);
+  assert.match(icon, /power: <><path \{\.\.\.menuStroke\} d="M10 4\.5H5\.5v15H10"/);
+  assert.match(icon, /power:[\s\S]*?d="M13 12h7\.5m-3\.5-4 4 4-4 4"/);
+  assert.doesNotMatch(icon, /settings:[\s\S]*?dottedStroke/);
+  assert.doesNotMatch(icon, /info:[\s\S]*?dottedStroke/);
+  assert.doesNotMatch(icon, /power:[\s\S]*?dottedStroke/);
 });
