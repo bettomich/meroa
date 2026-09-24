@@ -96,5 +96,48 @@ test("every metric value uses the shared Space Grotesk typography with a readabl
   assert.match(styles, /\.metric-row__value \{[\s\S]*?font-family: "Space Grotesk"/);
   assert.match(styles, /font-variant-numeric: tabular-nums/);
   assert.match(styles, /\.metric-row__value-unit \{[\s\S]*?font-size: \.85em/);
-  assert.match(gauge, /"gauge__value"/);
+  assert.match(gauge, /gauge__value-number/);
+});
+
+test("the Hero uses Space Grotesk for every dynamic value and its percent symbol", async () => {
+  const [gauge, styles] = await Promise.all([
+    readFile(new URL("src/components/DottedGauge.tsx", root), "utf8"),
+    readFile(new URL("src/styles/global.css", root), "utf8"),
+  ]);
+  assert.match(gauge, /gauge__value-number/);
+  assert.match(gauge, /gauge__value-unit/);
+  assert.match(styles, /\.gauge__value \{[\s\S]*?font-family: "Space Grotesk"/);
+  assert.match(styles, /\.gauge__value-unit \{[\s\S]*?font-family: "Space Grotesk"/);
+  assert.match(styles, /\.gauge__value-unit \{[\s\S]*?font-size: \.87em/);
+  assert.doesNotMatch(styles.match(/\.gauge__value \{[\s\S]*?\n\}/)?.[0] ?? "", /Doto/);
+});
+
+test("Reset uses the bounded single-line duration variant while the other Hero modes remain unchanged", async () => {
+  const [app, gauge, styles] = await Promise.all([
+    readFile(new URL("src/App.tsx", root), "utf8"),
+    readFile(new URL("src/components/DottedGauge.tsx", root), "utf8"),
+    readFile(new URL("src/styles/global.css", root), "utf8"),
+  ]);
+  assert.match(app, /heroMetric\.label === "reset" \? "duration" : "default"/);
+  assert.match(gauge, /valueKind\?: "default" \| "duration"/);
+  assert.match(styles, /\.gauge__value--duration \{[\s\S]*?max-width: 158px/);
+  assert.match(styles, /font-size: clamp\(34px, 10\.5vw, 40px\)/);
+  assert.match(styles, /white-space: nowrap/);
+});
+
+test("secondary navigation stays inside the popover and settings/about are frontend-only", async () => {
+  const [app, menu, en, it] = await Promise.all([
+    readFile(new URL("src/App.tsx", root), "utf8"),
+    readFile(new URL("src/components/QuickMenu.tsx", root), "utf8"),
+    readFile(new URL("src/locales/en.json", root), "utf8"),
+    readFile(new URL("src/locales/it.json", root), "utf8"),
+  ]);
+  assert.match(app, /useState<"home" \| "settings" \| "about">/);
+  assert.match(app, /onClick=\{\(\) => setView\("home"\)\}/);
+  assert.match(app, /page\.settings\.general/);
+  assert.match(app, /page\.about\.localFirst/);
+  assert.match(menu, /onNavigate\(item\.key as "settings" \| "about"\)/);
+  assert.match(menu, /disabled=\{item\.disabled\}/);
+  assert.match(en, /"comingSoon": "Coming soon"/);
+  assert.match(it, /"comingSoon": "In arrivo"/);
 });

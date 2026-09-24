@@ -5,23 +5,22 @@ import type { TrayMode } from "../usage";
 
 interface QuickMenuProps {
   onClose: () => void;
-  onRefresh: () => void;
+  onNavigate: (view: "settings" | "about") => void;
   trayMode: TrayMode;
   onTrayModeChange: (mode: TrayMode) => void;
 }
 
-type MenuItem = { key: string; icon: IconName; action?: "refresh"; separator?: boolean };
+type MenuItem = { key: string; icon: IconName; action?: "navigate"; disabled?: boolean; separator?: boolean };
 
 const items: MenuItem[] = [
-  { key: "protectUsage", icon: "shield" },
-  { key: "alerts", icon: "bell" },
-  { key: "refresh", icon: "refresh", action: "refresh" },
-  { key: "settings", icon: "settings", separator: true },
-  { key: "about", icon: "info" },
+  { key: "protectUsage", icon: "shield", disabled: true },
+  { key: "alerts", icon: "bell", disabled: true },
+  { key: "settings", icon: "settings", action: "navigate", separator: true },
+  { key: "about", icon: "info", action: "navigate" },
   { key: "quit", icon: "power", separator: true },
 ];
 
-export function QuickMenu({ onClose, onRefresh, trayMode, onTrayModeChange }: QuickMenuProps) {
+export function QuickMenu({ onClose, onNavigate, trayMode, onTrayModeChange }: QuickMenuProps) {
   const { t } = useI18n();
   const menuRef = useRef<HTMLDivElement>(null);
 
@@ -37,13 +36,14 @@ export function QuickMenu({ onClose, onRefresh, trayMode, onTrayModeChange }: Qu
           key={item.key}
           type="button"
           role="menuitem"
+          disabled={item.disabled}
           onClick={() => {
-            if (item.action === "refresh") onRefresh();
+            if (item.action === "navigate") onNavigate(item.key as "settings" | "about");
             onClose();
           }}
         >
           <Icon name={item.icon} />
-          <span>{t(`menu.${item.key}`)}</span>
+          <span>{t(`menu.${item.key}`)}{item.disabled ? <small>{t("menu.comingSoon")}</small> : null}</span>
         </button>
       ))}
       <div className="quick-menu__tray-mode" role="group" aria-label={t("menu.trayValue")}>

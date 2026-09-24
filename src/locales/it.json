@@ -29,7 +29,19 @@
     "settings": "Impostazioni",
     "about": "Informazioni",
     "quit": "Esci",
+    "comingSoon": "In arrivo",
     "trayValue": "Valore nella barra",
     "tray": { "auto": "Automatico", "fiveHours": "5 ore", "weekly": "Settimanale" }
+  },
+  "page": {
+    "settings": {
+      "title": "Impostazioni", "general": "Generali", "language": "Lingua", "italian": "Italiano", "english": "Inglese",
+      "autostart": "Avvia con Windows", "notConfigured": "Non configurato", "monitoring": "Monitoraggio", "trayValue": "Valore nella barra",
+      "refresh": "Aggiornamento", "everyFiveMinutes": "Ogni 5 minuti", "data": "Dati", "storage": "Archiviazione", "deviceOnly": "Solo dispositivo"
+    },
+    "about": {
+      "title": "Informazioni", "currentVersion": "Versione corrente", "tagline": "Know what you have.\nProtect what you need.",
+      "localFirst": "Local-first", "noCloud": "Nessun cloud MEROA"
+    }
   }
 }

@@ -23,8 +23,9 @@ import {
 } from "./usage";
 
 export function App() {
-  const { language, t } = useI18n();
+  const { language, setLanguage, t } = useI18n();
   const [menuOpen, setMenuOpen] = useState(false);
+  const [view, setView] = useState<"home" | "settings" | "about">("home");
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [usageState, setUsageState] = useState<UsageState>({ status: "loading" });
   const [heroSelection, setHeroSelection] = useState<HeroSelection>(readHeroSelection);
@@ -34,6 +35,7 @@ export function App() {
 
   const closePopover = useCallback(async () => {
     setMenuOpen(false);
+    setView("home");
     if (isTauri()) await invoke("hide_popover");
   }, []);
 
@@ -164,10 +166,15 @@ export function App() {
     saveTrayMode(mode);
   };
 
+  const openView = (nextView: "settings" | "about") => {
+    setView(nextView);
+    setMenuOpen(false);
+  };
+
   return (
     <main className="app-stage" ref={stageRef}>
       <section className="popover" aria-label={t("app.popoverLabel")}>
-        <header className="popover__header">
+        {view === "home" ? <header className="popover__header">
           <div className="identity">
             <div className="brand">MEROA</div>
             <div className={`status status--${statusTone}`} aria-label={stateMessage ?? statusText}>
@@ -194,13 +201,20 @@ export function App() {
               <Icon name="more" />
             </button>
           </div>
-        </header>
+        </header> : <header className="page-header">
+          <button className="page-header__back" type="button" onClick={() => setView("home")}>
+            <span aria-hidden="true">←</span>
+            <span>{t(`page.${view}.title`)}</span>
+          </button>
+        </header>}
 
+        {view === "home" ? <>
         <div className="hero-panel">
           <DottedGauge
             value={heroMetric.percentage}
             displayValue={heroMetric.value}
             label={data ? t(`usage.${heroMetric.label}`) : heroLabel}
+            valueKind={heroMetric.label === "reset" ? "duration" : "default"}
           />
         </div>
 
@@ -241,8 +255,30 @@ export function App() {
             <span>{freshnessText}</span>
           </div>
         </footer>
+        </> : view === "settings" ? <section className="page-view settings-view" aria-label={t("page.settings.title")}>
+          <div className="page-section">
+            <div className="page-section__label">{t("page.settings.general")}</div>
+            <div className="settings-row"><span>{t("page.settings.language")}</span><button type="button" className="settings-row__value" onClick={() => setLanguage(language === "it" ? "en" : "it")}>{language === "it" ? t("page.settings.italian") : t("page.settings.english")} <span aria-hidden="true">›</span></button></div>
+            <div className="settings-row"><span>{t("page.settings.autostart")}</span><span className="settings-row__value settings-row__value--muted">{t("page.settings.notConfigured")}</span></div>
+          </div>
+          <div className="page-section">
+            <div className="page-section__label">{t("page.settings.monitoring")}</div>
+            <div className="settings-row"><span>{t("page.settings.trayValue")}</span><span className="settings-row__value">{t(`menu.tray.${trayMode}`)} <span aria-hidden="true">›</span></span></div>
+            <div className="settings-row"><span>{t("page.settings.refresh")}</span><span className="settings-row__value settings-row__value--muted">{t("page.settings.everyFiveMinutes")}</span></div>
+          </div>
+          <div className="page-section">
+            <div className="page-section__label">{t("page.settings.data")}</div>
+            <div className="settings-row"><span>{t("page.settings.storage")}</span><span className="settings-row__value settings-row__value--muted">{t("page.settings.deviceOnly")}</span></div>
+          </div>
+        </section> : <section className="page-view about-view" aria-label={t("page.about.title")}>
+          <div className="about-view__brand">MEROA</div>
+          <div className="about-view__version">{t("page.about.currentVersion")}</div>
+          <p className="about-view__tagline">{t("page.about.tagline")}</p>
+          <div className="about-view__local"><span className="status__dot" aria-hidden="true" />{t("page.about.localFirst")}</div>
+          <div className="about-view__muted">{t("page.about.noCloud")}</div>
+        </section>}
 
-        {menuOpen ? <QuickMenu onClose={() => setMenuOpen(false)} onRefresh={() => void refresh()} trayMode={trayMode} onTrayModeChange={selectTrayMode} /> : null}
+        {menuOpen ? <QuickMenu onClose={() => setMenuOpen(false)} onNavigate={openView} trayMode={trayMode} onTrayModeChange={selectTrayMode} /> : null}
       </section>
       <span className="popover-pointer" aria-hidden="true" />
     </main>

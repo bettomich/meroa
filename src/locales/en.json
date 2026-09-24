@@ -29,7 +29,19 @@
     "settings": "Settings",
     "about": "About",
     "quit": "Quit",
+    "comingSoon": "Coming soon",
     "trayValue": "Tray value",
     "tray": { "auto": "Automatic", "fiveHours": "5 hours", "weekly": "Weekly" }
+  },
+  "page": {
+    "settings": {
+      "title": "Settings", "general": "General", "language": "Language", "italian": "Italian", "english": "English",
+      "autostart": "Start with Windows", "notConfigured": "Not configured", "monitoring": "Monitoring", "trayValue": "Tray value",
+      "refresh": "Refresh", "everyFiveMinutes": "Every 5 minutes", "data": "Data", "storage": "Storage", "deviceOnly": "Device only"
+    },
+    "about": {
+      "title": "About", "currentVersion": "Current version", "tagline": "Know what you have.\nProtect what you need.",
+      "localFirst": "Local-first", "noCloud": "No MEROA cloud"
+    }
   }
 }

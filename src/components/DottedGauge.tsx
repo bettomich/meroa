@@ -2,15 +2,18 @@ interface DottedGaugeProps {
   value: number | null;
   label: string;
   displayValue?: string | null;
+  valueKind?: "default" | "duration";
 }
 
 const DOT_COUNT = 42;
 
-export function DottedGauge({ value, label, displayValue }: DottedGaugeProps) {
+export function DottedGauge({ value, label, displayValue, valueKind = "default" }: DottedGaugeProps) {
   const activeDots = value === null
     ? 0
     : Math.round((Math.min(100, Math.max(0, value)) / 100) * DOT_COUNT);
   const shownValue = displayValue ?? (value === null ? "--" : `${value}%`);
+  const isPercentage = shownValue.endsWith("%");
+  const number = isPercentage ? shownValue.slice(0, -1) : shownValue;
   const ariaValue = `${shownValue} ${label}`;
 
   return (
@@ -34,8 +37,9 @@ export function DottedGauge({ value, label, displayValue }: DottedGaugeProps) {
         })}
       </svg>
       <div className="gauge__content">
-        <div className={value === null ? "gauge__value gauge__value--empty" : "gauge__value"}>
-          <span>{shownValue}</span>
+        <div className={`gauge__value${value === null ? " gauge__value--empty" : ""}${valueKind === "duration" ? " gauge__value--duration" : ""}`}>
+          <span className="gauge__value-number">{number}</span>
+          {isPercentage ? <span className="gauge__value-unit">%</span> : null}
         </div>
         <div className="gauge__label">{label}</div>
       </div>
