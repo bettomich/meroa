@@ -264,6 +264,16 @@ fn set_tray_mode(app: AppHandle, mode: String) {
     update_tray_usage(&app, &status);
 }
 
+fn quit_application(app: &AppHandle) {
+    codex_usage::terminate_active_child();
+    app.exit(0);
+}
+
+#[tauri::command]
+fn quit_application_command(app: AppHandle) {
+    quit_application(&app);
+}
+
 fn toggle_popover(app: &AppHandle) {
     let Some(window) = app.get_webview_window(POPOVER_LABEL) else {
         return;
@@ -667,7 +677,8 @@ pub fn run() {
             get_usage_state,
             refresh_usage,
             set_tray_language,
-            set_tray_mode
+            set_tray_mode,
+            quit_application_command
         ])
         .setup(|app| {
             let tray_icon_size = tray_icon_size(app.handle());
@@ -710,8 +721,7 @@ pub fn run() {
                         });
                     }
                     "quit" => {
-                        codex_usage::terminate_active_child();
-                        app.exit(0);
+                        quit_application(app);
                     }
                     _ => {}
                 })

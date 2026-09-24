@@ -198,6 +198,10 @@ export function App() {
     setMenuOpen(false);
   };
 
+  const quitApplication = () => {
+    if (isTauri()) void invoke("quit_application_command");
+  };
+
   return (
     <main className="app-stage" ref={stageRef}>
       <section className="popover" aria-label={t("app.popoverLabel")}>
@@ -305,7 +309,7 @@ export function App() {
           <div className="about-view__muted">{t("page.about.noCloud")}</div>
         </section>}
 
-        {menuOpen ? <QuickMenu onClose={() => setMenuOpen(false)} onNavigate={openView} trayMode={trayMode} onTrayModeChange={selectTrayMode} /> : null}
+        {menuOpen ? <QuickMenu onClose={() => setMenuOpen(false)} onNavigate={openView} onQuit={quitApplication} trayMode={trayMode} onTrayModeChange={selectTrayMode} /> : null}
       </section>
       <span className="popover-pointer" aria-hidden="true" />
     </main>

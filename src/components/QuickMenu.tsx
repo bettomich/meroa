@@ -6,6 +6,7 @@ import type { TrayMode } from "../usage";
 interface QuickMenuProps {
   onClose: () => void;
   onNavigate: (view: "settings" | "about") => void;
+  onQuit: () => void;
   trayMode: TrayMode;
   onTrayModeChange: (mode: TrayMode) => void;
 }
@@ -20,7 +21,7 @@ const items: MenuItem[] = [
   { key: "quit", icon: "power", separator: true },
 ];
 
-export function QuickMenu({ onClose, onNavigate, trayMode, onTrayModeChange }: QuickMenuProps) {
+export function QuickMenu({ onClose, onNavigate, onQuit, trayMode, onTrayModeChange }: QuickMenuProps) {
   const { t } = useI18n();
   const menuRef = useRef<HTMLDivElement>(null);
 
@@ -39,6 +40,7 @@ export function QuickMenu({ onClose, onNavigate, trayMode, onTrayModeChange }: Q
           disabled={item.disabled}
           onClick={() => {
             if (item.action === "navigate") onNavigate(item.key as "settings" | "about");
+            if (item.key === "quit") onQuit();
             onClose();
           }}
         >
