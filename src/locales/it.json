@@ -36,7 +36,7 @@
   "page": {
     "settings": {
       "title": "Impostazioni", "general": "Generali", "language": "Lingua", "italian": "Italiano", "english": "Inglese",
-      "autostart": "Avvia con Windows", "notConfigured": "Non configurato", "monitoring": "Monitoraggio", "trayValue": "Valore nella barra",
+      "autostart": "Avvia con Windows", "notConfigured": "Non configurato", "autostartState": { "loading": "Verifica…", "enabled": "Attivo", "disabled": "Disattivo", "error": "Non disponibile" }, "monitoring": "Monitoraggio", "trayValue": "Valore nella barra",
       "refresh": "Aggiornamento", "everyFiveMinutes": "Ogni 5 minuti", "data": "Dati", "storage": "Archiviazione", "deviceOnly": "Solo dispositivo"
     },
     "about": {

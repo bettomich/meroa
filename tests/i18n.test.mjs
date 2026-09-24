@@ -141,3 +141,23 @@ test("secondary navigation stays inside the popover and settings/about are front
   assert.match(en, /"comingSoon": "Coming soon"/);
   assert.match(it, /"comingSoon": "In arrivo"/);
 });
+
+test("autostart uses the official plugin as the system source of truth", async () => {
+  const [bridge, app, cargo, capability] = await Promise.all([
+    readFile(new URL("src/autostart.ts", root), "utf8"),
+    readFile(new URL("src/App.tsx", root), "utf8"),
+    readFile(new URL("src-tauri/Cargo.toml", root), "utf8"),
+    readFile(new URL("src-tauri/capabilities/default.json", root), "utf8"),
+  ]);
+  assert.match(bridge, /@tauri-apps\/plugin-autostart/);
+  assert.match(bridge, /isEnabled\(\)/);
+  assert.match(bridge, /await enable\(\)/);
+  assert.match(bridge, /await disable\(\)/);
+  assert.match(bridge, /AUTOSTART_CHOICE_KEY/);
+  assert.match(bridge, /localStorage\.getItem\(AUTOSTART_CHOICE_KEY\) === null/);
+  assert.match(bridge, /enabled !== shouldEnable/);
+  assert.match(app, /loadAutostartState\(\)/);
+  assert.match(app, /setAutostartEnabled\(shouldEnable\)/);
+  assert.match(cargo, /tauri-plugin-autostart = "2"/);
+  assert.match(capability, /autostart:default/);
+});

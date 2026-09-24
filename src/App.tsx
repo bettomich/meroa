@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { invoke, isTauri } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
+import { loadAutostartState, setAutostartEnabled, type AutostartState } from "./autostart";
 import { DottedGauge } from "./components/DottedGauge";
 import { Icon } from "./components/Icon";
 import { MetricRow } from "./components/MetricRow";
@@ -26,6 +27,7 @@ export function App() {
   const { language, setLanguage, t } = useI18n();
   const [menuOpen, setMenuOpen] = useState(false);
   const [view, setView] = useState<"home" | "settings" | "about">("home");
+  const [autostartState, setAutostartState] = useState<AutostartState>("loading");
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [usageState, setUsageState] = useState<UsageState>({ status: "loading" });
   const [heroSelection, setHeroSelection] = useState<HeroSelection>(readHeroSelection);
@@ -90,6 +92,22 @@ export function App() {
   useEffect(() => {
     if (isTauri()) void invoke("set_tray_language", { language });
   }, [language]);
+
+  useEffect(() => {
+    if (!isTauri()) {
+      setAutostartState("disabled");
+      return;
+    }
+    let active = true;
+    void loadAutostartState()
+      .then((state) => {
+        if (active) setAutostartState(state);
+      })
+      .catch(() => {
+        if (active) setAutostartState("error");
+      });
+    return () => { active = false; };
+  }, []);
 
   useEffect(() => {
     if (isTauri()) void invoke("set_tray_mode", { mode: trayMode });
@@ -164,6 +182,15 @@ export function App() {
   const selectTrayMode = (mode: TrayMode) => {
     setTrayMode(mode);
     saveTrayMode(mode);
+  };
+
+  const toggleAutostart = () => {
+    if (!isTauri() || autostartState === "loading") return;
+    const shouldEnable = autostartState !== "enabled";
+    setAutostartState("loading");
+    void setAutostartEnabled(shouldEnable)
+      .then(setAutostartState)
+      .catch(() => setAutostartState("error"));
   };
 
   const openView = (nextView: "settings" | "about") => {
@@ -259,7 +286,7 @@ export function App() {
           <div className="page-section">
             <div className="page-section__label">{t("page.settings.general")}</div>
             <div className="settings-row"><span>{t("page.settings.language")}</span><button type="button" className="settings-row__value" onClick={() => setLanguage(language === "it" ? "en" : "it")}>{language === "it" ? t("page.settings.italian") : t("page.settings.english")} <span aria-hidden="true">›</span></button></div>
-            <div className="settings-row"><span>{t("page.settings.autostart")}</span><span className="settings-row__value settings-row__value--muted">{t("page.settings.notConfigured")}</span></div>
+            <div className="settings-row"><span>{t("page.settings.autostart")}</span><button type="button" className="settings-row__value settings-row__value--muted" aria-pressed={autostartState === "enabled"} disabled={autostartState === "loading"} onClick={toggleAutostart}>{t(`page.settings.autostartState.${autostartState}`)}</button></div>
           </div>
           <div className="page-section">
             <div className="page-section__label">{t("page.settings.monitoring")}</div>

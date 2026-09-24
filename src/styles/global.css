@@ -445,6 +445,7 @@ button:focus-visible {
 .settings-row { min-height: 42px; display: flex; align-items: center; justify-content: space-between; gap: 14px; border-bottom: 1px solid rgba(255,255,255,.07); color: #d8d8d8; font-size: 13px; }
 .settings-row__value { display: inline-flex; align-items: center; gap: 8px; padding: 0; border: 0; color: var(--text-primary); background: transparent; font: inherit; white-space: nowrap; }
 button.settings-row__value { cursor: pointer; }
+button.settings-row__value:disabled { cursor: wait; opacity: .72; }
 .settings-row__value span { color: var(--icon-secondary); font-size: 18px; line-height: 1; }
 .settings-row__value--muted { color: var(--text-secondary); }
 .about-view { padding: 26px 8px 8px; }

@@ -12,7 +12,7 @@ use std::{
 };
 use tauri::{
     image::Image,
-    menu::{CheckMenuItem, Menu, MenuItem, PredefinedMenuItem},
+    menu::{Menu, MenuItem, PredefinedMenuItem},
     tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent},
     AppHandle, Emitter, LogicalSize, Manager, PhysicalPosition, Rect, WindowEvent,
 };
@@ -634,6 +634,10 @@ fn start_usage_refresh(app: AppHandle) {
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
+        .plugin(tauri_plugin_autostart::init(
+            tauri_plugin_autostart::MacosLauncher::LaunchAgent,
+            None::<Vec<&str>>,
+        ))
         .manage(PopoverState::default())
         .manage(UsageStore::default())
         .invoke_handler(tauri::generate_handler![
@@ -648,20 +652,12 @@ pub fn run() {
             let tray_icon_size = tray_icon_size(app.handle());
             let open = MenuItem::with_id(app, "open", "Open", true, None::<&str>)?;
             let refresh = MenuItem::with_id(app, "refresh", "Refresh", true, None::<&str>)?;
-            let startup = CheckMenuItem::with_id(
-                app,
-                "startup",
-                "Start with Windows",
-                true,
-                false,
-                None::<&str>,
-            )?;
             let settings = MenuItem::with_id(app, "settings", "Settings", true, None::<&str>)?;
             let separator = PredefinedMenuItem::separator(app)?;
             let quit = MenuItem::with_id(app, "quit", "Quit", true, None::<&str>)?;
             let menu = Menu::with_items(
                 app,
-                &[&open, &refresh, &startup, &settings, &separator, &quit],
+                &[&open, &refresh, &settings, &separator, &quit],
             )?;
 
             TrayIconBuilder::with_id("meroa-tray")

@@ -36,7 +36,7 @@
   "page": {
     "settings": {
       "title": "Settings", "general": "General", "language": "Language", "italian": "Italian", "english": "English",
-      "autostart": "Start with Windows", "notConfigured": "Not configured", "monitoring": "Monitoring", "trayValue": "Tray value",
+      "autostart": "Start with Windows", "notConfigured": "Not configured", "autostartState": { "loading": "Checking…", "enabled": "On", "disabled": "Off", "error": "Unavailable" }, "monitoring": "Monitoring", "trayValue": "Tray value",
       "refresh": "Refresh", "everyFiveMinutes": "Every 5 minutes", "data": "Data", "storage": "Storage", "deviceOnly": "Device only"
     },
     "about": {
