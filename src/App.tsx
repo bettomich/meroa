@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { invoke, isTauri } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
-import { loadAutostartState, setAutostartEnabled, type AutostartState } from "./autostart";
+import { loadAutostartState, readAutostartState, setAutostartEnabled, type AutostartState } from "./autostart";
 import { DottedGauge } from "./components/DottedGauge";
 import { Icon } from "./components/Icon";
 import { MetricRow } from "./components/MetricRow";
@@ -186,9 +186,9 @@ export function App() {
 
   const toggleAutostart = () => {
     if (!isTauri() || autostartState === "loading") return;
-    const shouldEnable = autostartState !== "enabled";
     setAutostartState("loading");
-    void setAutostartEnabled(shouldEnable)
+    void readAutostartState()
+      .then((currentState) => setAutostartEnabled(currentState !== "enabled"))
       .then(setAutostartState)
       .catch(() => setAutostartState("error"));
   };

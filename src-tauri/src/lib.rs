@@ -613,8 +613,16 @@ fn refresh_usage_now(app: &AppHandle) -> UsageStatus {
                 }
             } else {
                 match error {
-                    FetchError::Unavailable(message) => UsageStatus::Unavailable { message },
-                    FetchError::Source(message) => UsageStatus::Error { message },
+                    FetchError::Unavailable | FetchError::SignInRequired => {
+                        UsageStatus::Unavailable {
+                            message: error.message().into(),
+                        }
+                    }
+                    FetchError::Timeout | FetchError::InvalidResponse | FetchError::Source => {
+                        UsageStatus::Error {
+                            message: error.message().into(),
+                        }
+                    }
                 }
             }
         }
@@ -642,13 +650,15 @@ fn start_usage_refresh(app: AppHandle) {
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
+        // Single-instance must initialize before every other plugin so a second launch
+        // exits before it can initialize services or create a tray icon.
+        .plugin(tauri_plugin_single_instance::init(|app, _argv, _cwd| {
+            show_popover(app);
+        }))
         .plugin(tauri_plugin_autostart::init(
             tauri_plugin_autostart::MacosLauncher::LaunchAgent,
             None::<Vec<&str>>,
         ))
-        .plugin(tauri_plugin_single_instance::init(|app, _argv, _cwd| {
-            show_popover(app);
-        }))
         .manage(PopoverState::default())
         .manage(UsageStore::default())
         .invoke_handler(tauri::generate_handler![
@@ -666,10 +676,7 @@ pub fn run() {
             let settings = MenuItem::with_id(app, "settings", "Settings", true, None::<&str>)?;
             let separator = PredefinedMenuItem::separator(app)?;
             let quit = MenuItem::with_id(app, "quit", "Quit", true, None::<&str>)?;
-            let menu = Menu::with_items(
-                app,
-                &[&open, &refresh, &settings, &separator, &quit],
-            )?;
+            let menu = Menu::with_items(app, &[&open, &refresh, &settings, &separator, &quit])?;
 
             TrayIconBuilder::with_id("meroa-tray")
                 .tooltip("MEROA — Loading Codex usage")
@@ -702,7 +709,10 @@ pub fn run() {
                             refresh_usage_now(&app);
                         });
                     }
-                    "quit" => app.exit(0),
+                    "quit" => {
+                        codex_usage::terminate_active_child();
+                        app.exit(0);
+                    }
                     _ => {}
                 })
                 .build(app)?;
@@ -723,8 +733,13 @@ pub fn run() {
             start_usage_refresh(app.handle().clone());
             Ok(())
         })
-        .run(tauri::generate_context!())
-        .expect("error while running MEROA");
+        .build(tauri::generate_context!())
+        .expect("error while building MEROA")
+        .run(|_, event| {
+            if matches!(event, tauri::RunEvent::Exit) {
+                codex_usage::terminate_active_child();
+            }
+        });
 }
 
 #[cfg(test)]

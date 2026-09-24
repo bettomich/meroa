@@ -154,10 +154,14 @@ test("autostart uses the official plugin as the system source of truth", async (
   assert.match(bridge, /await enable\(\)/);
   assert.match(bridge, /await disable\(\)/);
   assert.match(bridge, /AUTOSTART_CHOICE_KEY/);
-  assert.match(bridge, /localStorage\.getItem\(AUTOSTART_CHOICE_KEY\) === null/);
-  assert.match(bridge, /enabled !== shouldEnable/);
+  assert.match(bridge, /indexedDB\.open\(AUTOSTART_DATABASE, 1\)/);
+  assert.match(bridge, /await writeChoice\("default-applied"\)/);
+  assert.match(bridge, /await writeChoice\(shouldEnable \? "user-enabled" : "user-disabled"\)/);
+  assert.match(bridge, /return readAutostartState\(\)/);
+  assert.match(bridge, /\(state === "enabled"\) !== shouldEnable/);
   assert.match(app, /loadAutostartState\(\)/);
-  assert.match(app, /setAutostartEnabled\(shouldEnable\)/);
+  assert.match(app, /readAutostartState\(\)/);
+  assert.match(app, /setAutostartEnabled\(currentState !== "enabled"\)/);
   assert.match(cargo, /tauri-plugin-autostart = "2"/);
   assert.match(capability, /autostart:default/);
 });
@@ -169,6 +173,7 @@ test("single-instance uses the existing show and positioning path without tray p
   ]);
   assert.match(cargo, /tauri-plugin-single-instance = "2"/);
   assert.match(backend, /tauri_plugin_single_instance::init\(\|app, _argv, _cwd\| \{\s*show_popover\(app\);/);
+  assert.ok(backend.indexOf("tauri_plugin_single_instance::init") < backend.indexOf("tauri_plugin_autostart::init"));
   assert.match(backend, /fn show_popover\(app: &AppHandle\)/);
   assert.match(backend, /let _ = position_popover\(app\);/);
   assert.match(backend, /fn toggle_popover[\s\S]*?show_popover\(app\);/);
