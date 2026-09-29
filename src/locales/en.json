@@ -8,6 +8,7 @@
     "available": "Live",
     "unavailable": "Unavailable",
     "error": "Error",
+    "quitFailed": "Unable to quit MEROA. Use the tray menu.",
     "stale": "Stale data"
   },
   "usage": {

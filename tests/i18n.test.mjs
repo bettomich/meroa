@@ -136,7 +136,7 @@ test("secondary navigation stays inside the popover and settings/about are front
   assert.match(app, /onClick=\{\(\) => setView\("home"\)\}/);
   assert.match(app, /page\.settings\.general/);
   assert.match(app, /page\.about\.localFirst/);
-  assert.match(menu, /onNavigate\(item\.key as "settings" \| "about"\)/);
+  assert.match(menu, /handleQuickMenuAction/);
   assert.match(menu, /disabled=\{item\.disabled\}/);
   assert.match(en, /"comingSoon": "Coming soon"/);
   assert.match(it, /"comingSoon": "In arrivo"/);
@@ -194,15 +194,18 @@ test("menu action icons share the MEROA stroke language and keep exit unambiguou
   assert.doesNotMatch(icon, /power:[\s\S]*?dottedStroke/);
 });
 
-test("internal exit delegates to the native tray quit path", async () => {
-  const [app, menu, backend] = await Promise.all([
+test("internal exit schedules the native tray quit path on the Tauri main thread", async () => {
+  const [app, menu, backend, lifecycle] = await Promise.all([
     readFile(new URL("src/App.tsx", root), "utf8"),
     readFile(new URL("src/components/QuickMenu.tsx", root), "utf8"),
     readFile(new URL("src-tauri/src/lib.rs", root), "utf8"),
+    readFile(new URL("src-tauri/src/codex_usage.rs", root), "utf8"),
   ]);
-  assert.match(app, /invoke\("quit_application_command"\)/);
-  assert.match(menu, /if \(item\.key === "quit"\) onQuit\(\);/);
+  assert.match(app, /await requestNativeQuit\(invoke\)/);
+  assert.match(menu, /handleQuickMenuAction/);
   assert.match(backend, /fn quit_application\(app: &AppHandle\) \{\s*codex_usage::terminate_active_child\(\);\s*app\.exit\(0\);/);
   assert.match(backend, /"quit" => \{\s*quit_application\(app\);/);
-  assert.match(backend, /fn quit_application_command\(app: AppHandle\) \{\s*quit_application\(&app\);/);
+  assert.match(backend, /fn quit_application_command\(app: AppHandle\) -> Result<\(\), String> \{\s*let app_for_exit = app\.clone\(\);\s*app\.run_on_main_thread\(move \|\| quit_application\(&app_for_exit\)\)/);
+  assert.match(lifecycle, /const CHILD_REAP_TIMEOUT: Duration = Duration::from_secs\(2\)/);
+  assert.match(lifecycle, /active\.take\(\)[\s\S]*?drop\(active\);\s*terminate_child\(child\);/);
 });

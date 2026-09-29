@@ -1,12 +1,13 @@
 import { useEffect, useRef } from "react";
 import { Icon, type IconName } from "./Icon";
 import { useI18n } from "../i18n/I18nProvider";
+import { handleQuickMenuAction } from "../menuActions";
 import type { TrayMode } from "../usage";
 
 interface QuickMenuProps {
   onClose: () => void;
   onNavigate: (view: "settings" | "about") => void;
-  onQuit: () => void;
+  onQuit: () => Promise<void>;
   trayMode: TrayMode;
   onTrayModeChange: (mode: TrayMode) => void;
 }
@@ -39,9 +40,7 @@ export function QuickMenu({ onClose, onNavigate, onQuit, trayMode, onTrayModeCha
           role="menuitem"
           disabled={item.disabled}
           onClick={() => {
-            if (item.action === "navigate") onNavigate(item.key as "settings" | "about");
-            if (item.key === "quit") onQuit();
-            onClose();
+            void handleQuickMenuAction(item.key, item.action, { onClose, onNavigate, onQuit });
           }}
         >
           <Icon name={item.icon} />

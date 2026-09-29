@@ -7,6 +7,7 @@ import { Icon } from "./components/Icon";
 import { MetricRow } from "./components/MetricRow";
 import { QuickMenu } from "./components/QuickMenu";
 import { useI18n } from "./i18n/I18nProvider";
+import { requestNativeQuit } from "./quit";
 import {
   formatCredits,
   formatReset,
@@ -198,8 +199,13 @@ export function App() {
     setMenuOpen(false);
   };
 
-  const quitApplication = () => {
-    if (isTauri()) void invoke("quit_application_command");
+  const quitApplication = async () => {
+    if (!isTauri()) return;
+    try {
+      await requestNativeQuit(invoke);
+    } catch {
+      setUsageState({ status: "error", message: t("state.quitFailed") });
+    }
   };
 
   return (

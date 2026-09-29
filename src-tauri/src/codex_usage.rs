@@ -8,7 +8,7 @@ use std::{
     process::{Child, Command, Stdio},
     sync::{mpsc, Mutex, OnceLock},
     thread,
-    time::{Duration, SystemTime, UNIX_EPOCH},
+    time::{Duration, Instant, SystemTime, UNIX_EPOCH},
 };
 
 const FIVE_HOURS_MINUTES: u64 = 5 * 60;
@@ -18,6 +18,7 @@ const MAX_JSONL_LINE_BYTES: usize = 32 * 1024;
 const MAX_RESPONSE_BYTES: usize = 128 * 1024;
 const MAX_CREDIT_BALANCE_BYTES: usize = 16;
 const MAX_RESET_TIMESTAMP: i64 = 4_102_444_800; // 2100-01-01 UTC
+const CHILD_REAP_TIMEOUT: Duration = Duration::from_secs(2);
 
 static ACTIVE_CHILD: OnceLock<Mutex<Option<Child>>> = OnceLock::new();
 
@@ -282,9 +283,8 @@ fn spawn_app_server() -> Result<(), FetchError> {
     let child = command.spawn().map_err(|_| FetchError::Source)?;
     let mut active = active_child().lock().map_err(|_| FetchError::Source)?;
     if active.is_some() {
-        let mut child = child;
-        let _ = child.kill();
-        let _ = child.wait();
+        drop(active);
+        terminate_child(child);
         return Err(FetchError::Source);
     }
     *active = Some(child);
@@ -367,21 +367,28 @@ fn read_rate_limits() -> Result<Value, FetchError> {
         .map_err(|_| FetchError::Timeout)?
 }
 
+fn terminate_child(mut child: Child) {
+    let _ = child.kill();
+    let deadline = Instant::now() + CHILD_REAP_TIMEOUT;
+    while Instant::now() < deadline {
+        match child.try_wait() {
+            Ok(Some(_)) | Err(_) => return,
+            Ok(None) => thread::sleep(Duration::from_millis(10)),
+        }
+    }
+}
+
 pub fn terminate_active_child() {
     if let Ok(mut active) = active_child().lock() {
-        if let Some(child) = active.as_mut() {
-            let _ = child.kill();
+        if let Some(child) = active.take() {
+            drop(active);
+            terminate_child(child);
         }
     }
 }
 
 fn finish_active_child() {
-    if let Ok(mut active) = active_child().lock() {
-        if let Some(mut child) = active.take() {
-            let _ = child.kill();
-            let _ = child.wait();
-        }
-    }
+    terminate_active_child();
 }
 
 pub fn fetch_usage() -> Result<CodexUsage, FetchError> {
@@ -417,7 +424,12 @@ pub fn fetch_usage() -> Result<CodexUsage, FetchError> {
 
 #[cfg(test)]
 mod tests {
-    use std::{fs, io::Cursor, time::Duration};
+    use std::{
+        fs,
+        io::Cursor,
+        process::{Command, Stdio},
+        time::{Duration, Instant},
+    };
 
     use super::{
         executable_from_bin_root, normalize_response, read_bounded_rate_limits,
@@ -535,6 +547,23 @@ mod tests {
     #[test]
     fn terminating_without_an_active_child_is_safe() {
         terminate_active_child();
+    }
+
+    #[cfg(windows)]
+    #[test]
+    fn child_cleanup_kills_and_reaps_a_real_process_within_the_bound() {
+        let child = Command::new("cmd")
+            .args(["/C", "ping -n 30 127.0.0.1 > NUL"])
+            .stdin(Stdio::null())
+            .stdout(Stdio::null())
+            .stderr(Stdio::null())
+            .spawn()
+            .expect("start test child");
+        let started = Instant::now();
+
+        super::terminate_child(child);
+
+        assert!(started.elapsed() < super::CHILD_REAP_TIMEOUT);
     }
 
     #[test]

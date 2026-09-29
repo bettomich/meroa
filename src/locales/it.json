@@ -8,6 +8,7 @@
     "available": "Live",
     "unavailable": "Non disponibile",
     "error": "Errore",
+    "quitFailed": "Impossibile uscire da MEROA. Usa il menu nella barra.",
     "stale": "Dati non aggiornati"
   },
   "usage": {

@@ -270,8 +270,10 @@ fn quit_application(app: &AppHandle) {
 }
 
 #[tauri::command]
-fn quit_application_command(app: AppHandle) {
-    quit_application(&app);
+fn quit_application_command(app: AppHandle) -> Result<(), String> {
+    let app_for_exit = app.clone();
+    app.run_on_main_thread(move || quit_application(&app_for_exit))
+        .map_err(|error| error.to_string())
 }
 
 fn toggle_popover(app: &AppHandle) {
