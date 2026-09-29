@@ -32,7 +32,13 @@
     }
   },
   "bundle": {
-    "active": false,
-    "targets": "all"
+    "active": true,
+    "targets": ["nsis"],
+    "resources": [
+      "../legal/FONT_LICENSES.md",
+      "../legal/THIRD_PARTY_NOTICES.md",
+      "../assets/fonts/SpaceGrotesk-OFL.txt",
+      "../assets/fonts/Doto-OFL.txt"
+    ]
   }
 }
