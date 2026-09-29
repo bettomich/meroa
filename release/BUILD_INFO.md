@@ -1,9 +1,9 @@
-# MEROA V1 build information
+# MEROA 0.1.0
 
-- Version: 0.1.0
-- Git commit: 31a21218880a569899baa20a0a05b04e9f1bf7b3
+- Build source commit: 368105f9db9e19d8abe63bcf6d99b429a0dfd2ad
 - Build date: 2026-09-29
-- Target: Windows x86_64 (MSVC)
-- Artifact: `meroa.exe` (standalone executable, 9,424,384 bytes)
-- SHA-256: `B3DC9150198CB65FE1EE26E2883D8BB69605DC20B518E62E8CD37F5BBE165ACC`
+- Target: Windows x86_64
+- Distribution artifact: `MEROA_0.1.0_x64-setup.exe`
+- Installer: NSIS
+- SHA-256: `E11115003F1D4681FA1A84EFA86B930C8D5437B7BB2AE6E63594A9327D978EB6`
 - Authenticode: Not signed
