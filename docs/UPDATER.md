@@ -33,6 +33,24 @@ The public updater key is embedded in `tauri.conf.json`. The private key and its
 
 Losing the private updater key prevents publishing updates that existing updater-enabled installations can trust. The private key must never be committed, attached to a release, or printed in logs.
 
+## Release-signing protection
+
+The `release-signing` GitHub Environment is the only location for the two signing secrets. They must not be created as repository secrets. The workflow is split so that the `verify` job runs tests and builds with `contents: read` and no signing material. The signing jobs reference `release-signing` and receive the secrets only in the build step that needs them.
+
+Before adding either secret, configure the environment with these controls:
+
+- required reviewer: the Product Director (`bettomich`);
+- deployment branch/tag policy: `main` and the explicitly approved `release/*` tag pattern only;
+- do not allow an administrative bypass of protection rules, if the repository settings offer that option.
+
+The workflow is manual only. Signed artifact builds require the `sign_artifacts` input. Publishing requires `publish_release`, a non-empty release tag, Environment approval, and either the `main` branch or a selected `release/*` tag. If a release tag is selected, its name must exactly match `release_tag`. Only the publication job has `contents: write`; it creates a draft release only.
+
+## Private key backup and recovery
+
+Create two encrypted backups of the private key and retain the password separately. Keep one copy in an access-controlled password manager or encrypted vault and a second copy on an encrypted removable drive stored in a separate physical location. Do not put either copy in GitHub, the repository, email, chat, or an unencrypted cloud folder. Record who can access each backup and test the recovery process with a separate non-production key, not by exposing the production key.
+
+If the production key is lost, do not generate a replacement and continue publishing normally: already installed versions trust the embedded public key and will reject artifacts signed by a new key. Recover the original key first. If compromise is suspected, stop releases and plan a signed migration while the original trusted key is still available.
+
 ## Tauri signing versus Windows signing
 
 Tauri updater signing verifies that an update was produced by the MEROA release process. Windows Authenticode signing establishes publisher identity for Windows and SmartScreen. They are separate systems. This updater foundation does not add an Authenticode certificate, so SmartScreen warnings may still appear.

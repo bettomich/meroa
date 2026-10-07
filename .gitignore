@@ -11,3 +11,8 @@ src-tauri/gen/schemas/
 .env
 .env.*
 !.env.example
+
+# Updater signing material must never be committed.
+*.key
+*.key.pub
+MEROA-secrets/

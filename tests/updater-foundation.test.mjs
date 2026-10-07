@@ -47,11 +47,18 @@ test("Tauri updater uses signed NSIS artifacts from GitHub Releases", async () =
   assert.match(cargo, /tauri-plugin-updater = "2"/);
 });
 
-test("release workflow defaults to a signed non-publishing dry run", async () => {
+test("release workflow isolates signing and publication from verification", async () => {
   const workflow = await read(".github/workflows/windows-release.yml");
 
   assert.match(workflow, /workflow_dispatch:/);
+  assert.match(workflow, /sign_artifacts:[\s\S]*?default: false/);
   assert.match(workflow, /publish_release:[\s\S]*?default: false/);
+  assert.match(workflow, /Verify source without signing material/);
+  assert.match(workflow, /name: release-signing/);
+  assert.match(workflow, /sign-windows-x64:[\s\S]*?contents: read/);
+  assert.match(workflow, /publish-release:[\s\S]*?contents: write/);
+  assert.match(workflow, /Publication is allowed only from main or from a release\/\* tag/);
+  assert.match(workflow, /persist-credentials: false/);
   assert.match(workflow, /TAURI_SIGNING_PRIVATE_KEY/);
   assert.match(workflow, /TAURI_SIGNING_PRIVATE_KEY_PASSWORD/);
   assert.match(workflow, /releaseDraft: true/);
