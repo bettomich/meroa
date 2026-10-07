@@ -671,6 +671,7 @@ pub fn run() {
             tauri_plugin_autostart::MacosLauncher::LaunchAgent,
             None::<Vec<&str>>,
         ))
+        .plugin(tauri_plugin_updater::Builder::new().build())
         .manage(PopoverState::default())
         .manage(UsageStore::default())
         .invoke_handler(tauri::generate_handler![

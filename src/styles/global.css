@@ -455,6 +455,24 @@ button.settings-row__value:disabled { cursor: wait; opacity: .72; }
 .about-view__local { display: flex; align-items: center; gap: 9px; color: var(--text-primary); font-size: 13px; }
 .about-view__local .status__dot { width: 8px; height: 8px; }
 .about-view__muted { margin-top: 8px; color: var(--text-secondary); font-size: 12px; }
+.about-updates { margin-top: 28px; }
+.update-action {
+  min-height: 34px;
+  margin-top: 12px;
+  padding: 0 12px;
+  border: 1px solid rgba(255,255,255,.14);
+  border-radius: 7px;
+  color: #d8d8d8;
+  background: rgba(255,255,255,.035);
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+.update-action:hover { border-color: rgba(255,255,255,.26); background: rgba(255,255,255,.06); }
+.update-action:disabled { cursor: wait; opacity: .65; }
+.update-action--primary { display: block; color: var(--text-primary); border-color: rgba(255,255,255,.26); }
+.update-status { min-height: 20px; margin-top: 12px; color: var(--text-secondary); font-size: 12px; line-height: 1.45; }
+.update-status--success { color: var(--safe); }
 
 .is-spinning { animation: spin 650ms cubic-bezier(.35,.02,.22,1); }
 @keyframes spin { to { transform: rotate(360deg); } }

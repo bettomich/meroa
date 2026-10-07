@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { invoke, isTauri } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
+import { getVersion } from "@tauri-apps/api/app";
 import { loadAutostartState, readAutostartState, setAutostartEnabled, type AutostartState } from "./autostart";
 import { DottedGauge } from "./components/DottedGauge";
 import { Icon } from "./components/Icon";
@@ -8,6 +9,14 @@ import { MetricRow } from "./components/MetricRow";
 import { QuickMenu } from "./components/QuickMenu";
 import { useI18n } from "./i18n/I18nProvider";
 import { requestNativeQuit } from "./quit";
+import {
+  checkForMeroaUpdate,
+  downloadAndInstallMeroaUpdate,
+  readAutomaticUpdateCheck,
+  saveAutomaticUpdateCheck,
+  type MeroaUpdate,
+  type UpdateState,
+} from "./updater";
 import {
   formatCredits,
   formatReset,
@@ -29,12 +38,17 @@ export function App() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [view, setView] = useState<"home" | "settings" | "about">("home");
   const [autostartState, setAutostartState] = useState<AutostartState>("loading");
+  const [automaticUpdateCheck, setAutomaticUpdateCheck] = useState(readAutomaticUpdateCheck);
+  const [updateState, setUpdateState] = useState<UpdateState>({ status: "idle" });
+  const [appVersion, setAppVersion] = useState("0.1.0");
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [usageState, setUsageState] = useState<UsageState>({ status: "loading" });
   const [heroSelection, setHeroSelection] = useState<HeroSelection>(readHeroSelection);
   const [trayMode, setTrayMode] = useState<TrayMode>(readTrayMode);
   const [nowSeconds, setNowSeconds] = useState(() => Date.now() / 1000);
   const stageRef = useRef<HTMLElement>(null);
+  const availableUpdateRef = useRef<MeroaUpdate | null>(null);
+  const updateCheckInProgressRef = useRef(false);
 
   const closePopover = useCallback(async () => {
     setMenuOpen(false);
@@ -53,6 +67,39 @@ export function App() {
       setIsRefreshing(false);
     }
   }, [isRefreshing]);
+
+  const runUpdateCheck = useCallback(async (silent = false) => {
+    if (!isTauri() || updateCheckInProgressRef.current) return;
+    updateCheckInProgressRef.current = true;
+    if (!silent) setUpdateState({ status: "checking" });
+
+    try {
+      const previousUpdate = availableUpdateRef.current;
+      availableUpdateRef.current = null;
+      if (previousUpdate) await previousUpdate.close();
+
+      const update = await checkForMeroaUpdate();
+      availableUpdateRef.current = update;
+      setUpdateState(update
+        ? { status: "available", version: update.version }
+        : { status: "upToDate" });
+    } catch {
+      setUpdateState(silent ? { status: "idle" } : { status: "error" });
+    } finally {
+      updateCheckInProgressRef.current = false;
+    }
+  }, []);
+
+  const installAvailableUpdate = useCallback(async () => {
+    const update = availableUpdateRef.current;
+    if (!update || updateState.status === "downloading" || updateState.status === "installing") return;
+
+    try {
+      await downloadAndInstallMeroaUpdate(update, setUpdateState);
+    } catch {
+      setUpdateState({ status: "error" });
+    }
+  }, [updateState.status]);
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -83,6 +130,27 @@ export function App() {
       },
     );
     return () => unlisten?.();
+  }, []);
+
+  useEffect(() => {
+    if (!isTauri()) return;
+    let active = true;
+    void getVersion().then((version) => {
+      if (active) setAppVersion(version);
+    });
+    return () => { active = false; };
+  }, []);
+
+  useEffect(() => {
+    if (!isTauri() || !automaticUpdateCheck) return;
+    const timer = window.setTimeout(() => void runUpdateCheck(true), 3_000);
+    return () => window.clearTimeout(timer);
+  }, [automaticUpdateCheck, runUpdateCheck]);
+
+  useEffect(() => () => {
+    const update = availableUpdateRef.current;
+    availableUpdateRef.current = null;
+    if (update) void update.close();
   }, []);
 
   useEffect(() => {
@@ -192,6 +260,15 @@ export function App() {
       .then((currentState) => setAutostartEnabled(currentState !== "enabled"))
       .then(setAutostartState)
       .catch(() => setAutostartState("error"));
+  };
+
+  const toggleAutomaticUpdateCheck = () => {
+    setAutomaticUpdateCheck((enabled) => {
+      const nextValue = !enabled;
+      saveAutomaticUpdateCheck(nextValue);
+      if (nextValue) window.setTimeout(() => void runUpdateCheck(true), 0);
+      return nextValue;
+    });
   };
 
   const openView = (nextView: "settings" | "about") => {
@@ -309,10 +386,42 @@ export function App() {
           </div>
         </section> : <section className="page-view about-view" aria-label={t("page.about.title")}>
           <div className="about-view__brand">MEROA</div>
-          <div className="about-view__version">{t("page.about.currentVersion")}</div>
+          <div className="about-view__version">{t("page.about.version")} {appVersion}</div>
           <p className="about-view__tagline">{t("page.about.tagline")}</p>
           <div className="about-view__local"><span className="status__dot" aria-hidden="true" />{t("page.about.localFirst")}</div>
           <div className="about-view__muted">{t("page.about.noCloud")}</div>
+          <div className="about-updates">
+            <div className="page-section__label">{t("page.about.updates.title")}</div>
+            <div className="settings-row">
+              <span>{t("page.about.updates.automatic")}</span>
+              <button
+                type="button"
+                className="settings-row__value settings-row__value--muted"
+                aria-pressed={automaticUpdateCheck}
+                onClick={toggleAutomaticUpdateCheck}
+              >
+                {automaticUpdateCheck ? t("page.about.updates.on") : t("page.about.updates.off")}
+              </button>
+            </div>
+            <button
+              type="button"
+              className="update-action"
+              disabled={updateState.status === "checking" || updateState.status === "downloading" || updateState.status === "installing"}
+              onClick={() => void runUpdateCheck(false)}
+            >
+              {updateState.status === "checking" ? t("page.about.updates.checking") : t("page.about.updates.check")}
+            </button>
+            <div className="update-status" aria-live="polite">
+              {updateState.status === "upToDate" ? <span className="update-status--success">✓ {t("page.about.updates.upToDate")}</span> : null}
+              {updateState.status === "available" ? <>
+                <span>{t("page.about.updates.available")} · {updateState.version}</span>
+                <button type="button" className="update-action update-action--primary" onClick={() => void installAvailableUpdate()}>{t("page.about.updates.install")}</button>
+              </> : null}
+              {updateState.status === "downloading" ? <span>{t("page.about.updates.downloading")}{updateState.progress === null ? "" : ` · ${updateState.progress}%`}</span> : null}
+              {updateState.status === "installing" ? <span>{t("page.about.updates.installing")}</span> : null}
+              {updateState.status === "error" ? <span>{t("page.about.updates.error")}</span> : null}
+            </div>
+          </div>
         </section>}
 
         {menuOpen ? <QuickMenu onClose={() => setMenuOpen(false)} onNavigate={openView} onQuit={quitApplication} trayMode={trayMode} onTrayModeChange={selectTrayMode} /> : null}

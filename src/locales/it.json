@@ -41,8 +41,14 @@
       "refresh": "Aggiornamento", "everyFiveMinutes": "Ogni 5 minuti", "data": "Dati", "storage": "Archiviazione", "deviceOnly": "Solo dispositivo"
     },
     "about": {
-      "title": "Informazioni", "currentVersion": "Versione corrente", "tagline": "Know what you have.\nProtect what you need.",
-      "localFirst": "Local-first", "noCloud": "Nessun cloud MEROA"
+      "title": "Informazioni", "version": "Versione", "tagline": "Know what you have.\nProtect what you need.",
+      "localFirst": "Local-first", "noCloud": "Nessun cloud MEROA",
+      "updates": {
+        "title": "Aggiornamenti", "automatic": "Controlla automaticamente", "on": "Attivo", "off": "Disattivo",
+        "check": "Controlla aggiornamenti", "checking": "Verifica…", "upToDate": "MEROA è aggiornato",
+        "available": "Aggiornamento disponibile", "install": "Aggiorna MEROA", "downloading": "Download aggiornamento",
+        "installing": "Installazione aggiornamento…", "error": "Impossibile controllare gli aggiornamenti. Riprova più tardi."
+      }
     }
   }
 }

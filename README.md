@@ -74,6 +74,10 @@ MEROA also:
 - does not read Codex `auth.json` directly;
 - does not inspect your source code or documents.
 
+Updater-enabled versions can contact this repository's GitHub Releases to
+check for a newer signed installer. This does not add a MEROA backend,
+telemetry, or account. See the [updater architecture](docs/UPDATER.md).
+
 Codex may still use its normal network connection when providing usage data. MEROA does not add another cloud service between you and Codex.
 
 Read the full [privacy note](PRIVACY.md) and the [data-source documentation](docs/CODEX_USAGE_SOURCE.md).
