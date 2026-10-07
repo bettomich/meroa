@@ -35,7 +35,7 @@ Losing the private updater key prevents publishing updates that existing updater
 
 ## Release-signing protection
 
-The `release-signing` GitHub Environment is the only location for the two signing secrets. They must not be created as repository secrets. The workflow is split so that the `verify` job runs tests and builds with `contents: read` and no signing material. The signing jobs reference `release-signing` and receive the secrets only in the build step that needs them.
+The designated `release-signing` GitHub Environment is the only location for the two signing secrets once it has been configured. They must not be created as repository secrets. The workflow is split so that the `verify` job runs tests and builds with `contents: read` and no signing material. The signing jobs reference `release-signing` and receive the secrets only in the build step that needs them.
 
 Before adding either secret, configure the environment with these controls:
 
