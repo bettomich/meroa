@@ -3,5 +3,5 @@
   "identifier": "main-capability",
   "description": "Minimum permissions for the MEROA popover",
   "windows": ["main"],
-  "permissions": ["core:default", "autostart:default"]
+  "permissions": ["core:default", "autostart:default", "updater:default"]
 }

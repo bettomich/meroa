@@ -41,8 +41,14 @@
       "refresh": "Refresh", "everyFiveMinutes": "Every 5 minutes", "data": "Data", "storage": "Storage", "deviceOnly": "Device only"
     },
     "about": {
-      "title": "About", "currentVersion": "Current version", "tagline": "Know what you have.\nProtect what you need.",
-      "localFirst": "Local-first", "noCloud": "No MEROA cloud"
+      "title": "About", "version": "Version", "tagline": "Know what you have.\nProtect what you need.",
+      "localFirst": "Local-first", "noCloud": "No MEROA cloud",
+      "updates": {
+        "title": "Updates", "automatic": "Check automatically", "on": "On", "off": "Off",
+        "check": "Check for updates", "checking": "Checking…", "upToDate": "MEROA is up to date",
+        "available": "Update available", "install": "Update MEROA", "downloading": "Downloading update",
+        "installing": "Installing update…", "error": "Unable to check for updates. Try again later."
+      }
     }
   }
 }
