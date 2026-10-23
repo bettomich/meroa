@@ -112,7 +112,7 @@ test("the Hero uses Space Grotesk for every dynamic value and its percent symbol
   assert.doesNotMatch(styles.match(/\.gauge__value \{[\s\S]*?\n\}/)?.[0] ?? "", /Doto/);
 });
 
-test("Reset uses the bounded single-line duration variant while the other Hero modes remain unchanged", async () => {
+test("Reset uses the larger single-line duration variant while the other Hero modes remain unchanged", async () => {
   const [app, gauge, styles] = await Promise.all([
     readFile(new URL("src/App.tsx", root), "utf8"),
     readFile(new URL("src/components/DottedGauge.tsx", root), "utf8"),
@@ -120,8 +120,8 @@ test("Reset uses the bounded single-line duration variant while the other Hero m
   ]);
   assert.match(app, /heroMetric\.label === "reset" \? "duration" : "default"/);
   assert.match(gauge, /valueKind\?: "default" \| "duration"/);
-  assert.match(styles, /\.gauge__value--duration \{[\s\S]*?max-width: 158px/);
-  assert.match(styles, /font-size: clamp\(34px, 10\.5vw, 40px\)/);
+  assert.match(styles, /\.gauge__value--duration \{[\s\S]*?max-width: 192px/);
+  assert.match(styles, /\.gauge__value--duration \{[\s\S]*?font-size: 48px/);
   assert.match(styles, /white-space: nowrap/);
 });
 

@@ -1,6 +1,6 @@
 [package]
 name = "meroa"
-version = "0.1.0"
+version = "0.2.0"
 description = "A local, tray-first Codex quota companion"
 authors = ["MEROA"]
 edition = "2021"

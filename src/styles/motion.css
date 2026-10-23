@@ -1,0 +1,105 @@
+/* App-owned CSS approximation of the Material 3 Expressive spring scheme.
+ * Source/version, numeric mapping and fallback: docs/MOTION.md.
+ * Samples are precomputed: no spring solver runs on the user's computer. */
+:root {
+  --motion-spatial-duration: 500ms;
+  --motion-fast-spatial-duration: 350ms;
+  --motion-effects-duration: 200ms;
+  --motion-fast-effects-duration: 150ms;
+  --motion-spatial: cubic-bezier(.2, 0, 0, 1);
+  --motion-fast-spatial: cubic-bezier(.2, 0, 0, 1);
+  --motion-effects: cubic-bezier(.2, 0, 0, 1);
+  --motion-fast-effects: cubic-bezier(.2, 0, 0, 1);
+}
+@supports (animation-timing-function: linear(0, 1)) {
+  :root {
+    --motion-spatial: linear(0, 0.02605, 0.09135, 0.18002, 0.28018, 0.38322, 0.48317, 0.57614, 0.65983, 0.73315, 0.79585, 0.84829, 0.89123, 0.92562, 0.95255, 0.97311, 0.98835, 0.99923, 1.00664, 1.01133, 1.01396, 1.01505, 1.01505, 1.01432, 1.01312, 1.01167, 1.01011, 1.00857, 1.0071, 1.00576, 1.00457, 1.00354, 1.00267, 1.00195, 1.00137, 1.00091, 1.00055, 1.00028, 1.00008, 0.99995, 1);
+    --motion-fast-spatial: linear(0, 0.02767, 0.09949, 0.20033, 0.31743, 0.44042, 0.56132, 0.67428, 0.77538, 0.86235, 0.93424, 0.99112, 1.03385, 1.06382, 1.08272, 1.09241, 1.09473, 1.09146, 1.08421, 1.07439, 1.06316, 1.05149, 1.04011, 1.02953, 1.02012, 1.01206, 1.00544, 1.00023, 0.99635, 0.99366, 0.99199, 0.99118, 0.99104, 0.9914, 0.99213, 0.99309, 0.99416, 0.99527, 0.99634, 0.99733, 1);
+    --motion-effects: linear(0, 0.01752, 0.06155, 0.1219, 0.19121, 0.26424, 0.33737, 0.40817, 0.47507, 0.53716, 0.59399, 0.64543, 0.69156, 0.73262, 0.76892, 0.80085, 0.8288, 0.85316, 0.87431, 0.89262, 0.90842, 0.92202, 0.9337, 0.94371, 0.95227, 0.95957, 0.9658, 0.97109, 0.97559, 0.97941, 0.98265, 0.98539, 0.9877, 0.98966, 0.99131, 0.9927, 0.99388, 0.99487, 0.9957, 0.99639, 1);
+    --motion-fast-effects: linear(0, 0.02294, 0.079, 0.15355, 0.23655, 0.32135, 0.40367, 0.48091, 0.55168, 0.61534, 0.67182, 0.72138, 0.76446, 0.80162, 0.83348, 0.86063, 0.88368, 0.90314, 0.91953, 0.93328, 0.94478, 0.95437, 0.96236, 0.96899, 0.97449, 0.97904, 0.9828, 0.9859, 0.98845, 0.99055, 0.99228, 0.99369, 0.99485, 0.9958, 0.99658, 0.99722, 0.99773, 0.99816, 0.9985, 0.99878, 1);
+  }
+}
+
+/* Opt in only after the preference has been read, avoiding startup motion. */
+:root[data-motion="on"] .screen-content {
+  animation: screen-spatial var(--motion-spatial-duration) var(--motion-spatial),
+    content-effects var(--motion-effects-duration) var(--motion-effects);
+}
+:root[data-motion="on"] :is(.icon-button, .metric-row, .quick-menu__item, .quick-menu__tray-option, .page-header__back, button.settings-row__value) {
+  transition: transform var(--motion-fast-spatial-duration) var(--motion-fast-spatial),
+    background-color var(--motion-fast-effects-duration) var(--motion-fast-effects),
+    border-color var(--motion-fast-effects-duration) var(--motion-fast-effects),
+    color var(--motion-fast-effects-duration) var(--motion-fast-effects);
+}
+:root[data-motion="on"] :is(.icon-button, .metric-row, .quick-menu__item, .quick-menu__tray-option, .page-header__back, button.settings-row__value):active:not(:disabled) {
+  transform: scale(.98);
+}
+:root[data-motion="on"] .settings-switch__thumb {
+  transition: transform var(--motion-fast-spatial-duration) var(--motion-fast-spatial),
+    background-color var(--motion-fast-effects-duration) var(--motion-fast-effects);
+}
+:root[data-motion="on"] .gauge__content {
+  transition: transform var(--motion-spatial-duration) var(--motion-spatial);
+}
+:root[data-motion="on"] .gauge__value-number {
+  animation: content-effects var(--motion-effects-duration) var(--motion-effects);
+}
+/* Only active dots transition color. Consumed dots keep their original fill. */
+:root[data-motion="on"] .gauge__dot--active {
+  transition: fill var(--motion-fast-effects-duration) var(--motion-fast-effects);
+}
+
+/* Discrete display transitions preserve the exit animation, while hidden/inert
+ * immediately removes the menu from keyboard and accessibility navigation. */
+:root[data-motion="on"] :is(.quick-menu, .gauge__ring-layer, .gauge__label) {
+  transition: opacity var(--motion-effects-duration) var(--motion-effects),
+    transform var(--motion-spatial-duration) var(--motion-spatial),
+    display var(--motion-effects-duration) allow-discrete;
+}
+:root[data-motion="on"] .quick-menu {
+  transform-origin: top right;
+}
+:root[data-motion="on"] .quick-menu[hidden] {
+  opacity: 0;
+  transform: translateY(-6px) scale(.98);
+}
+:root[data-motion="on"] .gauge__ring-layer[hidden] {
+  opacity: 0;
+  transform: scale(.96);
+}
+:root[data-motion="on"] .gauge__label[hidden] { opacity: 0; }
+@starting-style {
+  :root[data-motion="on"] .quick-menu {
+    opacity: 0;
+    transform: translateY(-6px) scale(.98);
+  }
+  :root[data-motion="on"] .gauge__ring-layer {
+    opacity: 0;
+    transform: scale(.96);
+  }
+  :root[data-motion="on"] .gauge__label { opacity: 0; }
+}
+
+:root[data-motion="on"] .is-spinning {
+  animation: refresh-turn var(--motion-spatial-duration) var(--motion-spatial);
+}
+@keyframes screen-spatial { from { transform: translateY(8px); } to { transform: translateY(0); } }
+@keyframes content-effects { from { opacity: 0; } to { opacity: 1; } }
+@keyframes refresh-turn { to { transform: rotate(360deg); } }
+
+/* 'none', rather than near-zero durations, cancels existing animation work.
+ * The media query is also a CSS safety net before React handles a system change. */
+:root:not([data-motion="on"]) *,
+:root:not([data-motion="on"]) *::before,
+:root:not([data-motion="on"]) *::after {
+  animation: none !important;
+  transition: none !important;
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation: none !important;
+    transition: none !important;
+  }
+  :root[data-motion="on"] button:active { transform: none !important; }
+}
+

@@ -38,7 +38,9 @@
     "settings": {
       "title": "Impostazioni", "general": "Generali", "language": "Lingua", "italian": "Italiano", "english": "Inglese",
       "autostart": "Avvia con Windows", "notConfigured": "Non configurato", "autostartState": { "loading": "Verifica…", "enabled": "Attivo", "disabled": "Disattivo", "error": "Non disponibile" }, "monitoring": "Monitoraggio", "trayValue": "Valore nella barra",
-      "refresh": "Aggiornamento", "everyFiveMinutes": "Ogni 5 minuti", "data": "Dati", "storage": "Archiviazione", "deviceOnly": "Solo dispositivo"
+      "refresh": "Aggiornamento", "everyFiveMinutes": "Ogni 5 minuti", "data": "Dati", "storage": "Archiviazione", "deviceOnly": "Solo dispositivo",
+      "dotColor": "Colore dei punti", "dotColors": { "black": "Nero", "white": "Bianco", "green": "Verde" },
+      "animations": "Animazioni", "reducedMotion": "Movimento ridotto dal sistema: le animazioni sono sospese."
     },
     "about": {
       "title": "Informazioni", "currentVersion": "Versione corrente", "tagline": "Know what you have.\nProtect what you need.",

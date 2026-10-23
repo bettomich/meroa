@@ -38,7 +38,9 @@
     "settings": {
       "title": "Settings", "general": "General", "language": "Language", "italian": "Italian", "english": "English",
       "autostart": "Start with Windows", "notConfigured": "Not configured", "autostartState": { "loading": "Checking…", "enabled": "On", "disabled": "Off", "error": "Unavailable" }, "monitoring": "Monitoring", "trayValue": "Tray value",
-      "refresh": "Refresh", "everyFiveMinutes": "Every 5 minutes", "data": "Data", "storage": "Storage", "deviceOnly": "Device only"
+      "refresh": "Refresh", "everyFiveMinutes": "Every 5 minutes", "data": "Data", "storage": "Storage", "deviceOnly": "Device only",
+      "dotColor": "Dot color", "dotColors": { "black": "Black", "white": "White", "green": "Green" },
+      "animations": "Animations", "reducedMotion": "System reduced motion is enabled: animations are suspended."
     },
     "about": {
       "title": "About", "currentVersion": "Current version", "tagline": "Know what you have.\nProtect what you need.",

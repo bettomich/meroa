@@ -5,6 +5,7 @@ import { handleQuickMenuAction } from "../menuActions";
 import type { TrayMode } from "../usage";
 
 interface QuickMenuProps {
+  open: boolean;
   onClose: () => void;
   onNavigate: (view: "settings" | "about") => void;
   onQuit: () => Promise<void>;
@@ -22,16 +23,19 @@ const items: MenuItem[] = [
   { key: "quit", icon: "power", separator: true },
 ];
 
-export function QuickMenu({ onClose, onNavigate, onQuit, trayMode, onTrayModeChange }: QuickMenuProps) {
+export function QuickMenu({ open, onClose, onNavigate, onQuit, trayMode, onTrayModeChange }: QuickMenuProps) {
   const { t } = useI18n();
   const menuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    menuRef.current?.querySelector<HTMLButtonElement>("button")?.focus();
-  }, []);
+    if (!open) return;
+    const trigger = document.activeElement as HTMLElement | null;
+    menuRef.current?.querySelector<HTMLButtonElement>("button:not(:disabled)")?.focus();
+    return () => { if (trigger?.isConnected) trigger.focus(); };
+  }, [open]);
 
   return (
-    <div className="quick-menu" ref={menuRef} role="menu" aria-label={t("menu.label")}>
+    <div className="quick-menu" ref={menuRef} hidden={!open} inert={!open} role="menu" aria-label={t("menu.label")}>
       {items.map((item) => (
         <button
           className={item.separator ? "quick-menu__item quick-menu__item--separator" : "quick-menu__item"}

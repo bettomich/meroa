@@ -13,7 +13,7 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/bettomich/meroa/releases/download/v0.1.0/MEROA_0.1.0_x64-setup.exe"><strong>Download for Windows</strong></a>
+  <a href="https://github.com/bettomich/meroa/releases/download/v0.2.0/MEROA_0.2.0_x64-setup.exe"><strong>Download for Windows</strong></a>
   ·
   <a href="https://github.com/bettomich/meroa/releases/latest">Latest release</a>
 </p>
@@ -80,15 +80,15 @@ Read the full [privacy note](PRIVACY.md) and the [data-source documentation](doc
 
 ## Download
 
-### MEROA 0.1.0
+### MEROA 0.2.0
 
-[Download the Windows x64 installer](https://github.com/bettomich/meroa/releases/download/v0.1.0/MEROA_0.1.0_x64-setup.exe)
+[Download the Windows x64 installer](https://github.com/bettomich/meroa/releases/download/v0.2.0/MEROA_0.2.0_x64-setup.exe)
 
-You can also view the [release notes](https://github.com/bettomich/meroa/releases/tag/v0.1.0), [build information](release/BUILD_INFO.md), and [SHA-256 checksum](release/SHA256SUMS.txt).
+You can also view the [release notes](https://github.com/bettomich/meroa/releases/tag/v0.2.0), [build information](release/BUILD_INFO.md), and [SHA-256 checksum](release/SHA256SUMS.txt).
 
 ## Installation
 
-1. Download `MEROA_0.1.0_x64-setup.exe`.
+1. Download `MEROA_0.2.0_x64-setup.exe`.
 2. Open the installer.
 3. Launch MEROA.
 4. Find the MEROA indicator in the Windows notification area.
@@ -98,14 +98,30 @@ Windows may initially place MEROA under the hidden icons arrow (`^`).
 
 You can enable **Start with Windows** from Settings.
 
+To update an existing installation, quit MEROA from its menu, then run the new
+installer using the existing installation location. MEROA has no automatic updater.
+
+## Appearance and motion
+
+- Active dots are black by default; Settings also offers white and green.
+- At 10% remaining, active dots turn red regardless of the chosen color.
+  Consumed dots retain their existing appearance.
+- Reset shows only a large, centered countdown.
+- The persistent Animations switch is ON by default. OFF cancels decorative
+  animations immediately, while the countdown and usage refresh remain active.
+- System reduced motion overrides ON. Only the Material 3 Expressive movement
+  principles are adapted; MEROA keeps its existing visual identity.
+
+See [the motion implementation and verification notes](docs/MOTION.md).
+
 ## Windows SmartScreen
 
-MEROA 0.1.0 is not code-signed yet. Windows SmartScreen may therefore show a warning when you open the installer.
+MEROA 0.2.0 is not code-signed yet. Windows SmartScreen may therefore show a warning when you open the installer.
 
 If you downloaded MEROA from this repository:
 
 1. select **More info**;
-2. confirm that the file is `MEROA_0.1.0_x64-setup.exe`;
+2. confirm that the file is `MEROA_0.2.0_x64-setup.exe`;
 3. optionally verify its SHA-256 checksum;
 4. select **Run anyway**.
 
@@ -121,7 +137,7 @@ MEROA does not require an API key or a separate MEROA login.
 
 ## Roadmap
 
-Available in 0.1.0:
+Available in 0.2.0:
 
 - Codex 5 Hours, Weekly, Credits, and Reset values
 - automatic and manual refresh
@@ -131,6 +147,8 @@ Available in 0.1.0:
 - English and Italian interface
 - optional Windows autostart
 - single-instance behaviour
+- persistent active-dot color and motion preferences
+- centered reset countdown and reduced-motion support
 
 Planned:
 

@@ -162,7 +162,6 @@ button:focus-visible {
   color: var(--icon-secondary);
   background: transparent;
   cursor: pointer;
-  transition: background-color 140ms ease, color 140ms ease;
 }
 
 .icon-button:hover,
@@ -190,14 +189,20 @@ button:focus-visible {
   place-items: center;
 }
 
-.gauge__ring { position: absolute; inset: 0; width: 100%; height: 100%; }
+.gauge__ring-layer { position: absolute; inset: 0; }
+.gauge__ring { width: 100%; height: 100%; }
 .gauge__dot { fill: #525252; }
-.gauge__dot--active { fill: var(--text-primary); }
-.gauge__dot--accent { fill: var(--safe); }
+.gauge { --dot-active: #000; }
+.gauge[data-dot-color="white"] { --dot-active: var(--text-primary); }
+.gauge[data-dot-color="green"] { --dot-active: var(--safe); }
+.gauge[data-dot-color="critical"] { --dot-active: var(--critical); }
+.gauge__dot--active { fill: var(--dot-active); }
 
 .gauge__content {
   position: relative;
-  transform: translateY(2px);
+  /* Preserve the original number position without letting the caption's
+     discrete exit change content height and make the time jump. */
+  transform: translateY(-10.5px);
   text-align: center;
 }
 
@@ -231,13 +236,20 @@ button:focus-visible {
 }
 
 .gauge__value--duration {
-  max-width: 158px;
-  font-size: clamp(34px, 10.5vw, 40px);
+  max-width: 192px;
+  font-size: 48px;
   letter-spacing: -.055em;
   white-space: nowrap;
 }
 
+.gauge--duration .gauge__content { transform: none; }
+
 .gauge__label {
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  width: max-content;
+  transform: translateX(-50%);
   margin-top: 12px;
   color: #bcbcbc;
   font-size: 13px;
@@ -269,7 +281,6 @@ button:focus-visible {
   font: inherit;
   text-align: left;
   cursor: pointer;
-  transition: border-color 140ms ease, background-color 140ms ease;
 }
 
 .metric-row:hover { border-color: var(--text-secondary); }
@@ -456,9 +467,10 @@ button.settings-row__value:disabled { cursor: wait; opacity: .72; }
 .about-view__local .status__dot { width: 8px; height: 8px; }
 .about-view__muted { margin-top: 8px; color: var(--text-secondary); font-size: 12px; }
 
-.is-spinning { animation: spin 650ms cubic-bezier(.35,.02,.22,1); }
-@keyframes spin { to { transform: rotate(360deg); } }
-
-@media (prefers-reduced-motion: reduce) {
-  *, *::before, *::after { animation-duration: 1ms !important; transition-duration: 1ms !important; }
-}
+.settings-row__select { font-family: inherit; cursor: pointer; color-scheme: dark; }
+.settings-row__select option { color: var(--text-primary); background: var(--surface); }
+.settings-switch { min-height: 36px; min-width: 70px; justify-content: flex-end; }
+.settings-switch__track { display: inline-flex; align-items: center; width: 30px; height: 18px; padding: 3px; border: 1px solid var(--border); border-radius: 10px; background: var(--surface-raised); }
+.settings-switch__thumb { width: 10px; height: 10px; border-radius: 50%; background: var(--text-secondary); transform: translateX(0); }
+.settings-switch[aria-checked="true"] .settings-switch__thumb { background: var(--safe); transform: translateX(12px); }
+.settings-note { margin: 8px 0 0; color: var(--text-secondary); font-size: 11px; line-height: 1.4; }

@@ -8,6 +8,8 @@ import { MetricRow } from "./components/MetricRow";
 import { QuickMenu } from "./components/QuickMenu";
 import { useI18n } from "./i18n/I18nProvider";
 import { requestNativeQuit } from "./quit";
+import { useMotion } from "./motion/MotionProvider";
+import { readDotColor, saveDotColor, type DotColor } from "./preferences";
 import {
   formatCredits,
   formatReset,
@@ -26,6 +28,8 @@ import {
 
 export function App() {
   const { language, setLanguage, t } = useI18n();
+  const { animationsEnabled, motionEnabled, reducedMotion, setAnimationsEnabled } = useMotion();
+  const [dotColor, setDotColor] = useState<DotColor>(readDotColor);
   const [menuOpen, setMenuOpen] = useState(false);
   const [view, setView] = useState<"home" | "settings" | "about">("home");
   const [autostartState, setAutostartState] = useState<AutostartState>("loading");
@@ -211,6 +215,7 @@ export function App() {
   return (
     <main className="app-stage" ref={stageRef}>
       <section className="popover" aria-label={t("app.popoverLabel")}>
+        <div className="screen-content" key={view}>
         {view === "home" ? <header className="popover__header">
           <div className="identity">
             <div className="brand">MEROA</div>
@@ -224,9 +229,10 @@ export function App() {
               className="icon-button"
               type="button"
               aria-label={t("common.refresh")}
+              aria-busy={isRefreshing}
               onClick={() => void refresh()}
             >
-              <Icon name="refresh" className={isRefreshing ? "is-spinning" : ""} />
+              <Icon name="refresh" className={isRefreshing && motionEnabled ? "is-spinning" : ""} />
             </button>
             <button
               className="icon-button"
@@ -252,6 +258,7 @@ export function App() {
             displayValue={heroMetric.value}
             label={data ? t(`usage.${heroMetric.label}`) : heroLabel}
             valueKind={heroMetric.label === "reset" ? "duration" : "default"}
+            dotColor={dotColor}
           />
         </div>
 
@@ -297,6 +304,24 @@ export function App() {
             <div className="page-section__label">{t("page.settings.general")}</div>
             <div className="settings-row"><span>{t("page.settings.language")}</span><button type="button" className="settings-row__value" onClick={() => setLanguage(language === "it" ? "en" : "it")}>{language === "it" ? t("page.settings.italian") : t("page.settings.english")} <span aria-hidden="true">›</span></button></div>
             <div className="settings-row"><span>{t("page.settings.autostart")}</span><button type="button" className="settings-row__value settings-row__value--muted" aria-pressed={autostartState === "enabled"} disabled={autostartState === "loading"} onClick={toggleAutostart}>{t(`page.settings.autostartState.${autostartState}`)}</button></div>
+            <div className="settings-row">
+              <label htmlFor="dot-color">{t("page.settings.dotColor")}</label>
+              <select id="dot-color" className="settings-row__value settings-row__select" value={dotColor} onChange={(event) => {
+                const color = event.target.value as DotColor;
+                setDotColor(color);
+                saveDotColor(color);
+              }}>
+                {(["black", "white", "green"] as const).map((color) => <option key={color} value={color}>{t(`page.settings.dotColors.${color}`)}</option>)}
+              </select>
+            </div>
+            <div className="settings-row">
+              <span id="animations-label">{t("page.settings.animations")}</span>
+              <button type="button" className="settings-row__value settings-switch" role="switch" aria-labelledby="animations-label" aria-checked={animationsEnabled} aria-describedby={reducedMotion ? "reduced-motion-note" : undefined} onClick={() => setAnimationsEnabled(!animationsEnabled)}>
+                <span className="settings-switch__track" aria-hidden="true"><span className="settings-switch__thumb" /></span>
+                {animationsEnabled ? "ON" : "OFF"}
+              </button>
+            </div>
+            {reducedMotion ? <p id="reduced-motion-note" className="settings-note">{t("page.settings.reducedMotion")}</p> : null}
           </div>
           <div className="page-section">
             <div className="page-section__label">{t("page.settings.monitoring")}</div>
@@ -314,8 +339,9 @@ export function App() {
           <div className="about-view__local"><span className="status__dot" aria-hidden="true" />{t("page.about.localFirst")}</div>
           <div className="about-view__muted">{t("page.about.noCloud")}</div>
         </section>}
+        </div>
 
-        {menuOpen ? <QuickMenu onClose={() => setMenuOpen(false)} onNavigate={openView} onQuit={quitApplication} trayMode={trayMode} onTrayModeChange={selectTrayMode} /> : null}
+        <QuickMenu open={menuOpen} onClose={() => setMenuOpen(false)} onNavigate={openView} onQuit={quitApplication} trayMode={trayMode} onTrayModeChange={selectTrayMode} />
       </section>
       <span className="popover-pointer" aria-hidden="true" />
     </main>
