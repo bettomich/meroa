@@ -34,6 +34,21 @@
     "trayValue": "Valore nella barra",
     "tray": { "auto": "Automatico", "fiveHours": "5 ore", "weekly": "Settimanale" }
   },
+  "updates": {
+    "title": "Aggiornamenti", "automatic": "Controllo settimanale",
+    "schedule": "Una verifica ogni 7 giorni, mentre MEROA è aperta. Nessuna installazione automatica.",
+    "manualOnly": "Controllo automatico disattivato. Puoi verificare quando vuoi.",
+    "waiting": "Prima verifica in attesa", "checking": "Verifica in corso…",
+    "available": "Aggiornamento disponibile", "upToDate": "MEROA è aggiornata",
+    "error": "Verifica non riuscita. Riproveremo più tardi.",
+    "cached": "Ultimo controllo non riuscito: questa versione era già stata trovata.",
+    "unavailable": "Aggiornamenti disponibili solo nell’app Windows",
+    "installed": "Versione installata:", "lastChecked": "Ultimo controllo:",
+    "checkNow": "Verifica ora", "download": "Aggiorna…", "cooldown": "Per evitare richieste ripetute, attendi un minuto prima di verificare di nuovo.",
+    "confirmTitle": "Vuoi aggiornare alla versione", "confirmDescription": "Apriremo il download ufficiale su GitHub nel browser. Avvia il file scaricato per completare l’installazione guidata di Windows; prima di installare, chiudi MEROA dal menu Esci.",
+    "confirmDownload": "Apri download", "later": "Più tardi",
+    "downloadError": "Impossibile aprire il download. Riprova."
+  },
   "page": {
     "settings": {
       "title": "Impostazioni", "general": "Generali", "language": "Lingua", "italian": "Italiano", "english": "Inglese",

@@ -6,6 +6,8 @@ import { DottedGauge } from "./components/DottedGauge";
 import { Icon } from "./components/Icon";
 import { MetricRow } from "./components/MetricRow";
 import { QuickMenu } from "./components/QuickMenu";
+import { UpdateSettings } from "./components/UpdateSettings";
+import { useUpdates } from "./updates";
 import { useI18n } from "./i18n/I18nProvider";
 import { requestNativeQuit } from "./quit";
 import { useMotion } from "./motion/MotionProvider";
@@ -30,6 +32,8 @@ export function App() {
   const { language, setLanguage, t } = useI18n();
   const { animationsEnabled, motionEnabled, reducedMotion, setAnimationsEnabled } = useMotion();
   const [dotColor, setDotColor] = useState<DotColor>(readDotColor);
+  const updates = useUpdates();
+  const updateAvailable = Boolean(updates.state?.available);
   const [menuOpen, setMenuOpen] = useState(false);
   const [view, setView] = useState<"home" | "settings" | "about">("home");
   const [autostartState, setAutostartState] = useState<AutostartState>("loading");
@@ -239,9 +243,11 @@ export function App() {
               type="button"
               aria-label={t("common.more")}
               aria-expanded={menuOpen}
+              aria-describedby={updateAvailable ? "update-notification" : undefined}
               onClick={() => setMenuOpen((open) => !open)}
             >
               <Icon name="more" />
+              {updateAvailable ? <><span className="update-indicator" aria-hidden="true" /><span id="update-notification" className="visually-hidden">{t("updates.available")}</span></> : null}
             </button>
           </div>
         </header> : <header className="page-header">
@@ -300,6 +306,7 @@ export function App() {
           </div>
         </footer>
         </> : view === "settings" ? <section className="page-view settings-view" aria-label={t("page.settings.title")}>
+          <UpdateSettings state={updates.state} unavailable={updates.unavailable} onCheck={updates.checkNow} onAutomaticChange={updates.setAutomaticChecks} />
           <div className="page-section">
             <div className="page-section__label">{t("page.settings.general")}</div>
             <div className="settings-row"><span>{t("page.settings.language")}</span><button type="button" className="settings-row__value" onClick={() => setLanguage(language === "it" ? "en" : "it")}>{language === "it" ? t("page.settings.italian") : t("page.settings.english")} <span aria-hidden="true">›</span></button></div>
@@ -341,7 +348,7 @@ export function App() {
         </section>}
         </div>
 
-        <QuickMenu open={menuOpen} onClose={() => setMenuOpen(false)} onNavigate={openView} onQuit={quitApplication} trayMode={trayMode} onTrayModeChange={selectTrayMode} />
+        <QuickMenu open={menuOpen} onClose={() => setMenuOpen(false)} onNavigate={openView} onQuit={quitApplication} trayMode={trayMode} onTrayModeChange={selectTrayMode} updateAvailable={updateAvailable} />
       </section>
       <span className="popover-pointer" aria-hidden="true" />
     </main>

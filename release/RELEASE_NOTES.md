@@ -1,52 +1,63 @@
-# MEROA 0.2.0
+# MEROA 0.3.0
 
-Customizable timer dots, a clearer reset countdown and responsive motion while
-preserving MEROA's existing visual identity.
+Lightweight weekly update checks with a quiet notification in Settings and a
+confirmation before opening the official download.
 
 ## What's new
 
-- Active dots are black by default. Settings now offers Black, White and Green.
-- At 10% remaining or less, active dots turn red regardless of the selected color.
-  Consumed dots retain their existing appearance and progress is not reset.
-- Selecting Reset hides the dotted ring and caption, showing only a large,
-  centered countdown in MEROA's existing typography.
-- Screen changes, menu opening/closing, button interactions and timer state
-  changes use CSS motion adapted from Material 3 Expressive spring principles.
-- A persistent Animations ON/OFF switch is available in Settings and defaults to
-  ON. OFF cancels non-essential animation work immediately; the countdown and
-  usage refresh continue working.
-- The system's reduced-motion preference takes priority over the ON switch and
-  is respected when changed while MEROA is running.
-- Dot color and animation preferences are stored locally across app restarts.
-- Italian and English labels are included for the new settings.
+- MEROA checks public GitHub Releases once every seven days while running.
+  The first due check starts asynchronously after startup.
+- The last check, automatic-check preference and available release are stored
+  locally, so restarting MEROA does not trigger repeated requests.
+- A small indicator on More options and an update notice in the Settings menu
+  show when a newer stable Windows release is available.
+- Settings includes the installed version, last successful check, a weekly-check
+  ON/OFF switch and a manual Check now button.
+- Update opens a confirmation with Open download and Later. Only after consent
+  does the official GitHub installer download open in the default browser.
+- Automatic checks default ON. OFF suspends scheduled checks; manual checks
+  remain available. No frontend polling interval or additional polling thread
+  runs between checks.
+- Network failures keep any previously found update and retry after 24 hours.
+  Requests have a timeout and manual checks have a one-minute cooldown.
+- Releases are compared semantically. Drafts, prereleases, older versions,
+  missing Windows installers and non-canonical download URLs are rejected.
+- Italian and English update messages follow MEROA's existing appearance and
+  animation preferences. Timer behavior is unchanged.
 
-No additional runtime dependencies were introduced.
+The customizable dots, centered Reset display and accessible motion controls
+from 0.2.0 are included.
 
 ## Install or update
 
-Download `MEROA_0.2.0_x64-setup.exe` from this release.
-For an existing installation, quit MEROA from its menu, run the installer using
-the existing installation location, then launch MEROA again.
+Download `MEROA_0.3.0_x64-setup.exe` from this release.
+Quit MEROA from its menu, run the installer using the existing installation
+location, then launch MEROA again.
 
-MEROA does not have an in-app automatic updater.
+Versions before 0.3.0 need this manual upgrade to gain weekly update notices.
+Future notices guide you to the official download; MEROA does not download or
+execute an installer automatically. Windows setup remains an explicit user action.
 
 ## Verification
 
-- 20 automated tests pass.
-- TypeScript checks and the production frontend build pass.
-- Windows x64 release build and NSIS installer generation pass.
-- Chromium frontend checks cover colors, the critical threshold, reset display,
-  persisted preferences, animations OFF/ON, live reduced motion, keyboard focus
-  and refresh behavior with a test-only native-data fixture.
+- 20 frontend/unit tests and TypeScript production build pass.
+- 21 native tests pass; three opt-in tests are skipped by default.
+- The opt-in native HTTPS smoke test against real GitHub release metadata passes.
+- Windows x64 release compilation and NSIS installer generation pass.
+- Chromium frontend checks cover check progress, update availability, persisted
+  OFF, cached offers, consent, Later/Escape and focus, errors, animation OFF and
+  the existing color/reset controls using test-only native-data fixtures.
 
-Native WebView runtime behavior and performance on low-powered hardware were
-not manually verified. Implementation details are in `docs/MOTION.md`.
+No test release is published and no installer is executed during these checks.
+Windows upgrade execution and low-powered hardware performance were not manually
+verified. See `docs/UPDATE_CHECKS.md` for implementation and privacy details.
 
 ## Requirements and notices
 
-- Windows 10/11 x64.
-- Codex installed and authenticated.
+- Windows 10/11 x64, with Codex installed and authenticated.
+- Weekly checks send public release-metadata requests to GitHub; no Codex usage,
+  conversations, credentials or device identifier is sent. See `PRIVACY.md`.
 - The installer is not Authenticode-signed; Windows may show a SmartScreen warning.
 - `SHA256SUMS.txt` verifies the installer download. `BUILD_INFO.md` records the
-  source commit and build details.
+  build source commit and validation details.
 - Third-party notices and font licenses are included with the application.

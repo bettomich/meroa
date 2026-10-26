@@ -6,6 +6,7 @@ import type { TrayMode } from "../usage";
 
 interface QuickMenuProps {
   open: boolean;
+  updateAvailable?: boolean;
   onClose: () => void;
   onNavigate: (view: "settings" | "about") => void;
   onQuit: () => Promise<void>;
@@ -23,7 +24,7 @@ const items: MenuItem[] = [
   { key: "quit", icon: "power", separator: true },
 ];
 
-export function QuickMenu({ open, onClose, onNavigate, onQuit, trayMode, onTrayModeChange }: QuickMenuProps) {
+export function QuickMenu({ open, updateAvailable = false, onClose, onNavigate, onQuit, trayMode, onTrayModeChange }: QuickMenuProps) {
   const { t } = useI18n();
   const menuRef = useRef<HTMLDivElement>(null);
 
@@ -48,7 +49,7 @@ export function QuickMenu({ open, onClose, onNavigate, onQuit, trayMode, onTrayM
           }}
         >
           <Icon name={item.icon} />
-          <span>{t(`menu.${item.key}`)}{item.disabled ? <small>{t("menu.comingSoon")}</small> : null}</span>
+          <span>{t(`menu.${item.key}`)}{item.disabled ? <small>{t("menu.comingSoon")}</small> : null}{item.key === "settings" && updateAvailable ? <small className="update-menu-note">{t("updates.available")}</small> : null}</span>
         </button>
       ))}
       <div className="quick-menu__tray-mode" role="group" aria-label={t("menu.trayValue")}>

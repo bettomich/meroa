@@ -1,4 +1,5 @@
 mod codex_usage;
+mod updates;
 
 use codex_usage::{CodexUsage, FetchError};
 use serde::Serialize;
@@ -673,6 +674,7 @@ pub fn run() {
         ))
         .manage(PopoverState::default())
         .manage(UsageStore::default())
+        .manage(updates::UpdateStore::default())
         .invoke_handler(tauri::generate_handler![
             hide_popover,
             sync_popover_geometry,
@@ -680,7 +682,11 @@ pub fn run() {
             refresh_usage,
             set_tray_language,
             set_tray_mode,
-            quit_application_command
+            quit_application_command,
+            updates::get_update_state,
+            updates::check_for_update,
+            updates::set_automatic_update_checks,
+            updates::open_update_download
         ])
         .setup(|app| {
             let tray_icon_size = tray_icon_size(app.handle());
@@ -743,6 +749,7 @@ pub fn run() {
                 });
             }
             start_usage_refresh(app.handle().clone());
+            updates::start(app.handle().clone());
             Ok(())
         })
         .build(tauri::generate_context!())
